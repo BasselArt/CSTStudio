@@ -1,26 +1,24 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * ألوان النظام — الـ tokens الوحيدة المسموحة (SPEC §13).
+ * ممنوع أي hex خارج هذا الملف؛ الاستخدام عبر صفوف Tailwind المولدة
+ * (bg-sidebar, text-success, …) أو var(--color-*).
+ */
+@theme {
+  --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-sidebar: #1c2b54; /* القائمة الجانبية الكحلية */
+  --color-page: #f6f7f9; /* خلفية التطبيق */
+  --color-success: #15803d; /* نجاح / ضمن الوقت / تم التسليم */
+  --color-warning: #d97706; /* تحذير / مستحق قريبًا / جاهز للتنفيذ */
+  --color-danger: #dc2626; /* خطر / متأخر */
+  --color-info: #2563eb; /* معلومات / قيد المراجعة */
+  --color-progress: #7c3aed; /* قيد التنفيذ (بنفسجي التوزيع) */
+  --color-waiting: #0d9488; /* بانتظار الجهة (تركوازي) */
+  --color-muted-token: #64748b; /* محايد / جديد / متوقف */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-page);
 }

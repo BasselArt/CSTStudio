@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+/storage/*.db*
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+
+# drizzle migrations output
+/drizzle
