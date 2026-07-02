@@ -32,7 +32,7 @@ design/         الصور المرجعية الخمس (01-dashboard … 05-team
 
 ## قواعد منع التكرار — إلزامية (SPEC §4)
 
-1. نصوص الحالات/الأولويات/الأنواع وألوانها وترتيبها **حصريًا** من `core/constants.ts`. ممنوع كتابة "قيد التنفيذ" أو أي hex مباشرة في صفحة أو مكوّن.
+1. نصوص الحالات/الأولويات/الأنواع وألوانها وترتيبها **حصريًا** من `core/constants.ts`. ممنوع كتابة "قيد التنفيذ" أو أي hex مباشرة في صفحة أو مكوّن. الـ tokens في `globals.css`: `navy / page / success / warning / danger / info / progress / waiting / muted-token` (تولّد صفوف مثل `bg-navy`, `text-success`)، ومتغيرات shadcn الدلالية (`--primary`, `--sidebar`, `--destructive`, `--background`) موصولة بها.
 2. كل كتابة على الطلب تمر **حصريًا** عبر `services/requests.ts` (تكتب حدثًا في `request_events` + إشعارات). لا `db.update(requests)` خارج هذا الملف إطلاقًا.
 3. صحة الانتقال بين الحالات **حصريًا** عبر `core/state-machine.ts` (يرمي خطأً عند انتقال غير مسموح).
 4. الشارات والجداول والبطاقات مكونات `components/domain` مشتركة. ممنوع جدول أو Badge خاص بصفحة واحدة.

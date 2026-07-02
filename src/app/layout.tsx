@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
 const plexArabic = IBM_Plex_Sans_Arabic({
-  variable: "--font-plex-arabic",
+  variable: "--font-sans",
   weight: ["400", "500", "700"],
   subsets: ["arabic", "latin"],
 });
@@ -19,10 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
-      <body className={`${plexArabic.variable} font-sans antialiased`}>
-        {children}
-      </body>
+    <html lang="ar" dir="rtl" className={cn("font-sans", plexArabic.variable)}>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
