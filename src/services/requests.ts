@@ -17,6 +17,7 @@ import {
   assertTransition,
   TRANSITIONS,
 } from "@/core/state-machine";
+import { workingHoursBetween } from "@/core/calendar";
 import { computeSla, slaTargetHours } from "@/core/sla";
 import type {
   EventType,
@@ -682,6 +683,125 @@ export async function declineUrgent(id: number, actor: Actor, reason: string): P
 
 export async function deliver(id: number, actor: Actor): Promise<void> {
   await transition(id, "delivered", actor);
+}
+
+/* ------------------------------------------------------------------ */
+/* sla-sweep (SPEC §14) — idempotent بالكامل عبر dedupeKey             */
+/* ------------------------------------------------------------------ */
+
+export interface SweepResult {
+  checked: number;
+  alerts75: number;
+  overdueAlerts: number;
+  autoClosed: number;
+}
+
+export async function sweepSla(now = new Date()): Promise<SweepResult> {
+  const [settingsRow, types, managerIds] = await Promise.all([
+    getSettings(),
+    listRequestTypes(),
+    getStudioManagerIds(),
+  ]);
+  const typeById = new Map(types.map((t) => [t.id, t]));
+  const cfg = toCalendarCfg(settingsRow);
+
+  const rows = await db.query.requests.findMany();
+  const active = rows.filter(
+    (r) => !r.isDraft && !["closed", "cancelled"].includes(r.status),
+  );
+  if (active.length === 0) return { checked: 0, alerts75: 0, overdueAlerts: 0, autoClosed: 0 };
+
+  const events = await db.query.requestEvents.findMany({
+    where: and(
+      inArray(requestEvents.requestId, active.map((r) => r.id)),
+      inArray(requestEvents.type, ["status_change", "urgent_approval"]),
+    ),
+  });
+  const byRequest = new Map<number, RequestEventRow[]>();
+  for (const e of events) {
+    byRequest.set(e.requestId, [...(byRequest.get(e.requestId) ?? []), e]);
+  }
+
+  const result: SweepResult = {
+    checked: active.length,
+    alerts75: 0,
+    overdueAlerts: 0,
+    autoClosed: 0,
+  };
+  db.transaction((tx) => {
+    for (const req of active) {
+      const type = typeById.get(req.typeId);
+      if (!type) continue;
+      const sla = slaFor(req, byRequest.get(req.id) ?? [], type, settingsRow, now);
+      const d = sla.delivery;
+
+      // استهلاك ≥ عتبة التنبيه → إشعار للمصمم (sla75:{id})
+      if (
+        d.pct != null &&
+        d.pct * 100 >= settingsRow.alertThresholdPct &&
+        d.state !== "overdue" &&
+        d.state !== "stopped" &&
+        req.assigneeId
+      ) {
+        insertNotification(tx, {
+          userId: req.assigneeId,
+          requestId: req.id,
+          type: "sla75",
+          title: `تنبيه: استهلاك ${Math.round(d.pct * 100)}% من مدة الطلب ${req.number}`,
+          body: req.title,
+          dedupeKey: `sla75:${req.id}`,
+        });
+        result.alerts75 += 1;
+      }
+
+      // تجاوز الهدف → إشعار للمصمم والمسؤول (slaover:{id})
+      if (d.state === "overdue") {
+        const targets = [
+          ...(req.assigneeId ? [{ userId: req.assigneeId, key: `slaover:${req.id}:d` }] : []),
+          ...managerIds.map((m, i) => ({ userId: m, key: `slaover:${req.id}:m${i}` })),
+        ];
+        for (const t of targets) {
+          insertNotification(tx, {
+            userId: t.userId,
+            requestId: req.id,
+            type: "slaover",
+            title: `الطلب ${req.number} تجاوز هدف SLA`,
+            body: req.title,
+            dedupeKey: t.key,
+          });
+        }
+        result.overdueAlerts += 1;
+      }
+
+      // الإغلاق التلقائي: delivered منذ ≥ autoCloseWorkDays أيام عمل → closed بحدث system
+      if (req.status === "delivered" && req.deliveredAt) {
+        const sinceH = workingHoursBetween(new Date(req.deliveredAt), now, cfg);
+        if (sinceH >= settingsRow.autoCloseWorkDays * 8) {
+          assertTransition("delivered", "closed");
+          const ts = now.toISOString();
+          tx.update(requests)
+            .set({ status: "closed", closedAt: ts, updatedAt: ts })
+            .where(eq(requests.id, req.id))
+            .run();
+          addEvent(tx, req.id, "system", null, {
+            message: `إغلاق تلقائي بعد ${settingsRow.autoCloseWorkDays} أيام عمل من التسليم`,
+            from: "delivered",
+            to: "closed",
+          }, ts);
+          insertNotification(tx, {
+            userId: req.requesterId,
+            requestId: req.id,
+            type: "auto_closed",
+            title: `أُغلق الطلب ${req.number} تلقائيًا بعد التسليم`,
+            dedupeKey: `autoclose:${req.id}`,
+          });
+          result.autoClosed += 1;
+        }
+      }
+    }
+  });
+
+  return result;
 }
 
 export async function cancel(id: number, reason: string, actor: Actor): Promise<void> {

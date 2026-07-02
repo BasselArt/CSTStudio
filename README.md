@@ -54,4 +54,5 @@ pnpm db:seed      # بذور حتمية قابلة لإعادة التشغيل
 curl -X POST -H "x-job-token: $JOB_TOKEN" http://localhost:3000/api/jobs/sla-sweep
 ```
 
-(يُبنى المسار في Phase 6.)
+تعيد المهمة JSON بعدد الطلبات المفحوصة وتنبيهات 75% وتجاوزات SLA
+والإغلاقات التلقائية (`delivered` منذ ≥ 3 أيام عمل → `closed`).

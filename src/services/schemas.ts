@@ -127,7 +127,9 @@ export const requestTypeUpdateSchema = z.object({
   effortPoints: z.coerce.number().int().min(1).max(100),
   slaNormalH: z.coerce.number().int().min(1).max(400),
   slaHighH: z.coerce.number().int().min(1).max(400),
-  slaUrgentH: z
-    .union([z.literal(""), z.coerce.number().int().min(1).max(400)])
-    .transform((v) => (v === "" ? null : v)),
+  /** فارغ = «باتفاق» (null) */
+  slaUrgentH: z.preprocess(
+    (v) => (v === "" || v == null ? null : Number(v)),
+    z.number().int().min(1).max(400).nullable(),
+  ),
 });
