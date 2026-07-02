@@ -1,7 +1,7 @@
 // إدارة الطلبات (SPEC §12/02) — كل الفلاتر والتبويب والفرز والصفحة في searchParams.
 
 import Link from "next/link";
-import { Download, Plus } from "lucide-react";
+import { Bookmark, Download, Plus } from "lucide-react";
 import { PriorityBadge, SlaBadge, StatusBadge } from "@/components/domain/badges";
 import { DataTable, type DataColumn } from "@/components/domain/data-table";
 import { EmptyState } from "@/components/domain/empty-state";
@@ -41,12 +41,18 @@ export default async function RequestsPage({
   const sp = await searchParams;
   const filters = parseFilters(sp);
 
-  const [rows, departments, designers, types] = await Promise.all([
-    listVisibleRequests(actor),
+  const [allRows, departments, designers, types] = await Promise.all([
+    listVisibleRequests(actor, { includeDrafts: true }),
     listDepartments(),
     listDesigners(),
     listRequestTypes(),
   ]);
+
+  // المسودات تظهر لصاحبها فقط ولا تدخل أي مؤشر أو تبويب (SPEC §12/03)
+  const drafts = allRows.filter(
+    (r) => r.request.isDraft && r.request.requesterId === actor.id,
+  );
+  const rows = allRows.filter((r) => !r.request.isDraft);
 
   const counts = tabCounts(rows);
   const filtered = applyFilters(rows, filters);
@@ -173,6 +179,22 @@ export default async function RequestsPage({
           );
         })}
       </div>
+
+      {drafts.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          <Bookmark className="size-4 text-warning" />
+          <span className="font-medium">لديك {formatNumber(drafts.length)} مسودة محفوظة:</span>
+          {drafts.map((d) => (
+            <Link
+              key={d.request.id}
+              href={`/requests/${d.request.id}`}
+              className="text-info hover:underline"
+            >
+              {d.request.title}
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       <RequestsFilters
         departments={departments.map((d) => ({ value: String(d.id), label: d.name }))}

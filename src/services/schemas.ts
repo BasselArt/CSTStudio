@@ -44,6 +44,11 @@ export const createRequestSchema = z.object({
   channel: z.string().min(2, "اختر قناة الاستخدام.").max(100),
   priority: z.enum(PRIORITIES, "اختر الأولوية."),
   urgentJustification: optionalText(500),
+  /** طلب تعديل مرتبط بطلب أصلي بعد استنفاد جولات المراجعة (SPEC §6) */
+  relatedRequestId: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : Number(v)),
+    z.number().int().positive().optional(),
+  ),
   /** حقول القسم الرابع غير المخزنة كأعمدة — تُحفظ في حدث الإنشاء (سجل التغييرات) */
   referenceLinks: optionalText(500),
   requiredTexts: optionalText(1000),

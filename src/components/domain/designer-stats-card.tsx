@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LOAD_STATE_META } from "@/core/constants";
+import { LOAD_STATE_META, STATUS_META } from "@/core/constants";
 import type { ColorToken, LoadState } from "@/core/types";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -116,7 +116,9 @@ export function DesignerStatsCard({
             </div>
             <div>
               <p className="font-bold text-navy">{formatNumber(stats.inProgressCount)}</p>
-              <p className="text-[10px] text-muted-foreground">قيد التنفيذ</p>
+              <p className="text-[10px] text-muted-foreground">
+                {STATUS_META.in_progress.label}
+              </p>
             </div>
             <div>
               <p className={cn("font-bold", stats.overdueCount > 0 ? "text-danger" : "text-navy")}>

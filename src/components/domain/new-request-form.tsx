@@ -111,6 +111,8 @@ export function NewRequestForm({
   types,
   cfg,
   defaultDepartmentId,
+  defaultTypeId,
+  related,
   requesterName,
   action,
 }: {
@@ -118,13 +120,16 @@ export function NewRequestForm({
   types: TypeOption[];
   cfg: CalendarCfg;
   defaultDepartmentId: number | null;
+  defaultTypeId?: number | null;
+  /** طلب أصلي يرتبط به هذا الطلب كـ«طلب تعديل» (SPEC §6) */
+  related?: { id: number; number: string; title: string } | null;
   requesterName: string;
   action: (prev: NewRequestState, formData: FormData) => Promise<NewRequestState>;
 }) {
   const [state, formAction, pending] = useActionState(action, { fieldErrors: {} });
   const errors = state.fieldErrors;
 
-  const [typeId, setTypeId] = useState<number | null>(null);
+  const [typeId, setTypeId] = useState<number | null>(defaultTypeId ?? null);
   const [priority, setPriority] = useState<Priority>("normal");
   const [publishDueDate, setPublishDueDate] = useState("");
   const [description, setDescription] = useState("");
@@ -154,6 +159,20 @@ export function NewRequestForm({
           <Info className="size-4 shrink-0 text-info" />
           يبدأ احتساب مدة التنفيذ بعد اكتمال بيانات الطلب ومرفقاته واعتماده من مسؤول الاستوديو.
         </div>
+
+        {related ? (
+          <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <AlertTriangle className="size-4 shrink-0 text-warning" />
+            <span>
+              طلب تعديل مرتبط بالطلب الأصلي{" "}
+              <span className="font-bold" dir="ltr">
+                {related.number}
+              </span>{" "}
+              ({related.title}) — استُنفدت جولات المراجعة.
+            </span>
+            <input type="hidden" name="relatedRequestId" value={related.id} />
+          </div>
+        ) : null}
 
         {/* القسم الأول — بيانات الجهة الطالبة */}
         <SectionCard number={1} title="القسم الأول — بيانات الجهة الطالبة">

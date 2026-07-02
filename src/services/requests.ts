@@ -296,6 +296,8 @@ export interface RequestDetails extends EnrichedRequest {
   events: (RequestEventRow & { actorName: string | null })[];
   attachments: (AttachmentRow & { uploaderName: string })[];
   settingsRow: SettingsRow;
+  /** رقم الطلب الأصلي إذا كان هذا «طلب تعديل» مرتبطًا (SPEC §6) */
+  relatedRequestNumber: string | null;
 }
 
 export async function getRequestDetails(
@@ -321,6 +323,13 @@ export async function getRequestDetails(
   const type = types.find((t) => t.id === request.typeId)!;
   const userById = new Map(userRows.map((u) => [u.id, u.name]));
 
+  const related = request.relatedRequestId
+    ? await db.query.requests.findFirst({
+        where: eq(requests.id, request.relatedRequestId),
+        columns: { number: true },
+      })
+    : null;
+
   return {
     request,
     type,
@@ -337,6 +346,7 @@ export async function getRequestDetails(
       uploaderName: userById.get(a.uploadedById) ?? "—",
     })),
     settingsRow,
+    relatedRequestNumber: related?.number ?? null,
   };
 }
 
@@ -379,6 +389,7 @@ async function insertRequest(
         sizes: data.sizes,
         channel: data.channel,
         publishDueDate: data.publishDueDate,
+        relatedRequestId: data.relatedRequestId,
         isDraft,
         status: "new",
         createdAt: ts,

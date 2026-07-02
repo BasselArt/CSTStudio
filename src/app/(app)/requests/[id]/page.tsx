@@ -156,6 +156,14 @@ export default async function RequestDetailsPage({
             <RefreshCw className="size-3" />
             جولة المراجعة: {request.reviewRound} من {settingsRow.maxReviewRounds}
           </Badge>
+          {details.relatedRequestNumber && request.relatedRequestId ? (
+            <Link
+              href={`/requests/${request.relatedRequestId}`}
+              className="text-xs text-info hover:underline"
+            >
+              طلب تعديل مرتبط بالطلب {details.relatedRequestNumber}
+            </Link>
+          ) : null}
         </div>
         <RequestActions
           requestId={request.id}
@@ -186,6 +194,26 @@ export default async function RequestDetailsPage({
           <p className="rounded-lg bg-danger/5 p-3 text-sm text-danger">
             سبب الإلغاء: {request.cancelReason}
           </p>
+        ) : null}
+
+        {/* استُنفدت جولات المراجعة → طلب تعديل جديد مرتبط (SPEC §6) */}
+        {request.reviewRound >= settingsRow.maxReviewRounds &&
+        ["awaiting_feedback", "delivered", "closed"].includes(request.status) &&
+        (actor.role === "studio_manager" ||
+          (actor.role === "requester" && request.departmentId === actor.departmentId)) ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <span>
+              استُنفدت جولات المراجعة ({settingsRow.maxReviewRounds} من{" "}
+              {settingsRow.maxReviewRounds}) — لملاحظات إضافية أنشئ طلب تعديل مرتبطًا بهذا
+              الطلب.
+            </span>
+            <Link
+              href={`/requests/new?related=${request.id}`}
+              className="ms-auto rounded-lg bg-navy px-3 py-1.5 font-medium text-white hover:bg-navy/90"
+            >
+              إنشاء طلب تعديل
+            </Link>
+          </div>
         ) : null}
       </div>
 
