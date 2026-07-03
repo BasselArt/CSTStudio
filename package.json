@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
-    "audit:functions": "DATABASE_PATH=storage/functest.db drizzle-kit push && DATABASE_PATH=storage/functest.db tsx scripts/functional-audit.ts"
+    "audit:functions": "DATABASE_PATH=storage/functest.db drizzle-kit push && DATABASE_PATH=storage/functest.db tsx scripts/functional-audit.ts",
+    "simulate": "DATABASE_PATH=storage/simtest.db drizzle-kit push && DATABASE_PATH=storage/simtest.db tsx scripts/simulate-reality.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

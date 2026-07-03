@@ -65,6 +65,26 @@ describe("المؤشرات (kpi)", () => {
   it("متوسط مدة التسليم بأيام العمل (8 ساعات = يوم)", () => {
     expect(avgDeliveryWorkDays([16, 40])).toBeCloseTo(3.5);
     expect(avgDeliveryWorkDays([])).toBeNull();
+    expect(avgDeliveryWorkDays([6])).toBeCloseTo(0.75); // كسور الأيام
+  });
+
+  it("سعة مخصصة ونِسب كسرية", () => {
+    expect(loadPct(11, 30)).toBeCloseTo(36.67, 1);
+    expect(loadState(36.67, { loadLowPct: 40, loadHighPct: 75 })).toBe("low");
+  });
+
+  it("الالتزام: لا مُقيَّم أو الكل مستبعد → null (لا قسمة على صفر)", () => {
+    expect(complianceRatePct([])).toBeNull();
+    expect(complianceRatePct([{ metSla: true, excluded: true }])).toBeNull();
+  });
+
+  it("دلتا صفرية ليست تحسنًا في أي اتجاه", () => {
+    expect(deltaIsImprovement(0, true)).toBe(false);
+    expect(deltaIsImprovement(0, false)).toBe(false);
+  });
+
+  it("توزيع قائمة فارغة → []", () => {
+    expect(statusDistribution([])).toEqual([]);
   });
 
   it("توزيع الحالات بترتيب constants مع إسقاط الأصفار", () => {
