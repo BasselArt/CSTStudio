@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "audit:functions": "DATABASE_PATH=storage/functest.db drizzle-kit push && DATABASE_PATH=storage/functest.db tsx scripts/functional-audit.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

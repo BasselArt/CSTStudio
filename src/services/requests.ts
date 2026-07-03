@@ -554,6 +554,8 @@ export async function requestInfo(id: number, message: string, actor: Actor): Pr
 }
 
 export async function addComment(id: number, body: string, actor: Actor): Promise<void> {
+  // المدير قراءة فقط (§11) — الفحص في الخدمة لا في الواجهة وحدها
+  if (actor.role === "executive") throw new ForbiddenError();
   const managerIds = await getStudioManagerIds();
   await db.transaction((tx) => {
     const req = loadRequestOrThrow(tx, id, actor);
