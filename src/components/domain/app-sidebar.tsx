@@ -3,7 +3,7 @@
 // القائمة الجانبية اليمنى الكحلية (SPEC §12) — بزر طي.
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   PlusCircle,
   Settings,
+  UserCog,
   Users,
 } from "lucide-react";
 import type { Role } from "@/core/types";
@@ -20,7 +21,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: typeof LayoutGrid;
-  match: (pathname: string, tab: string | null) => boolean;
+  match: (pathname: string) => boolean;
   roles?: Role[];
 }
 
@@ -45,26 +46,31 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["requester", "studio_manager"],
   },
   {
-    href: "/team?tab=designers",
+    href: "/team",
     label: "المصممون",
     icon: Users,
-    match: (p, tab) => p === "/team" && tab !== "sla",
+    match: (p) => p === "/team",
     roles: ["studio_manager", "executive"],
   },
   {
-    href: "/team?tab=sla",
+    href: "/settings",
     label: "إعدادات SLA",
     icon: Settings,
-    match: (p, tab) => p === "/team" && tab === "sla",
+    match: (p) => p === "/settings",
+    roles: ["studio_manager"],
+  },
+  {
+    href: "/users",
+    label: "المستخدمون",
+    icon: UserCog,
+    match: (p) => p === "/users",
     roles: ["studio_manager"],
   },
 ];
 
 export function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(false);
-  const tab = searchParams.get("tab");
 
   return (
     <aside
@@ -89,7 +95,7 @@ export function AppSidebar({ role }: { role: Role }) {
 
       <nav className="mt-4 flex flex-1 flex-col gap-1 px-3">
         {NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role)).map((item) => {
-          const active = item.match(pathname, tab);
+          const active = item.match(pathname);
           const Icon = item.icon;
           return (
             <Link

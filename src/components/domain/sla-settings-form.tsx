@@ -21,7 +21,7 @@ import {
 import { DESIGN_TOOLS, TOOL_META } from "@/core/constants";
 import type { ToolFactors } from "@/core/types";
 import { formatDate } from "@/lib/format";
-import type { SettingsState } from "@/app/(app)/team/actions";
+import type { SettingsState } from "@/app/(app)/settings/actions";
 
 const DAY_NAMES = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 

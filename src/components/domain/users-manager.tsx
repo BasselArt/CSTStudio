@@ -1,6 +1,6 @@
 "use client";
 
-// إدارة المستخدمين (التبويب الثالث في /team) — إنشاء وتعديل وتعطيل الحسابات، للمسؤول فقط.
+// إدارة المستخدمين (/users) — إنشاء وتعديل وتعطيل الحسابات، للمسؤول فقط.
 
 import { useActionState, useState } from "react";
 import { Info, Pencil, Plus, UserCheck, UserX } from "lucide-react";
@@ -26,7 +26,7 @@ import {
 import { ROLES, ROLE_META } from "@/core/constants";
 import type { Role } from "@/core/types";
 import { formatNumber } from "@/lib/format";
-import type { SettingsState } from "@/app/(app)/team/actions";
+import type { UsersState } from "@/app/(app)/users/actions";
 import { DataTable, type DataColumn } from "./data-table";
 import { EmptyState } from "./empty-state";
 import { TOKEN_SOFT } from "./token-styles";
@@ -41,7 +41,7 @@ export interface ManagedUser {
   isActive: boolean;
 }
 
-type SettingsAction = (prev: SettingsState, formData: FormData) => Promise<SettingsState>;
+type UsersAction = (prev: UsersState, formData: FormData) => Promise<UsersState>;
 
 export function UsersManager({
   users,
@@ -53,13 +53,13 @@ export function UsersManager({
   users: ManagedUser[];
   departments: { id: number; name: string }[];
   currentUserId: number;
-  saveAction: SettingsAction;
-  toggleAction: SettingsAction;
+  saveAction: UsersAction;
+  toggleAction: UsersAction;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedUser | null>(null);
   const [saveState, saveFormAction, savePending] = useActionState(
-    async (prev: SettingsState, formData: FormData) => {
+    async (prev: UsersState, formData: FormData) => {
       const result = await saveAction(prev, formData);
       if (result.success) setOpen(false);
       return result;
