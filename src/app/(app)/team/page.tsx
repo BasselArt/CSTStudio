@@ -1,15 +1,12 @@
-// المصممون وإعدادات SLA (SPEC §12/05) — تبويبان عبر searchParams.tab.
+// المصممون (SPEC §12/05) — بطاقات الإحصائيات وطلبات المصمم المختار.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Settings, UserCog, Users } from "lucide-react";
 import { PriorityBadge, SlaBadge, StatusBadge } from "@/components/domain/badges";
 import { DataTable, type DataColumn } from "@/components/domain/data-table";
 import { DesignerStatsCard, type DesignerStats } from "@/components/domain/designer-stats-card";
 import { EmptyState } from "@/components/domain/empty-state";
 import { PageHeader } from "@/components/domain/page-header";
-import { SlaSettingsForm } from "@/components/domain/sla-settings-form";
-import { UsersManager } from "@/components/domain/users-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ACTIVE_STATUSES } from "@/core/constants";
 import { complianceRatePct } from "@/core/kpi";
@@ -17,37 +14,25 @@ import { designerLoadPoints, loadPct, loadState } from "@/core/load";
 import { requireActor } from "@/lib/auth";
 import { formatDate, formatNumber, formatRemaining } from "@/lib/format";
 import { listVisibleRequests, type EnrichedRequest } from "@/services/requests";
-import { getSettings, listRequestTypes } from "@/services/settings";
-import { listDepartments, listDesigners, listUsers } from "@/services/users";
+import { getSettings } from "@/services/settings";
+import { listDesigners } from "@/services/users";
 import { cn } from "@/lib/utils";
-import { saveSlaSettings, saveUser, toggleUserActive } from "./actions";
 
 export default async function TeamPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; designer?: string }>;
+  searchParams: Promise<{ designer?: string }>;
 }) {
   const actor = await requireActor();
   if (actor.role !== "studio_manager" && actor.role !== "executive") redirect("/");
 
   const sp = await searchParams;
-  const managerTabs = ["sla", "users"] as const;
-  const tab =
-    actor.role === "studio_manager" && managerTabs.includes(sp.tab as (typeof managerTabs)[number])
-      ? (sp.tab as (typeof managerTabs)[number])
-      : "designers";
 
-  const [designers, rows, settingsRow, types] = await Promise.all([
+  const [designers, rows, settingsRow] = await Promise.all([
     listDesigners(),
     listVisibleRequests(actor),
     getSettings(),
-    listRequestTypes(),
   ]);
-
-  const [managedUsers, allDepartments] =
-    tab === "users"
-      ? await Promise.all([listUsers(actor), listDepartments()])
-      : [[], []];
 
   /* إحصائيات كل مصمم */
   const stats: DesignerStats[] = designers.map((d) => {
@@ -131,145 +116,57 @@ export default async function TeamPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="المصممون وإعدادات SLA" />
+      <PageHeader title="المصممون" />
 
-      {/* التبويبان */}
-      <div className="flex gap-2 border-b">
-        <Link
-          href="/team?tab=designers"
-          className={cn(
-            "flex items-center gap-2 border-b-2 px-4 py-2 text-sm",
-            tab === "designers"
-              ? "border-navy font-medium text-navy"
-              : "border-transparent text-muted-foreground hover:text-navy",
-          )}
-        >
-          <Users className="size-4" />
-          المصممون
-        </Link>
-        {actor.role === "studio_manager" ? (
-          <>
-            <Link
-              href="/team?tab=sla"
-              className={cn(
-                "flex items-center gap-2 border-b-2 px-4 py-2 text-sm",
-                tab === "sla"
-                  ? "border-navy font-medium text-navy"
-                  : "border-transparent text-muted-foreground hover:text-navy",
-              )}
-            >
-              <Settings className="size-4" />
-              إعدادات SLA
-            </Link>
-            <Link
-              href="/team?tab=users"
-              className={cn(
-                "flex items-center gap-2 border-b-2 px-4 py-2 text-sm",
-                tab === "users"
-                  ? "border-navy font-medium text-navy"
-                  : "border-transparent text-muted-foreground hover:text-navy",
-              )}
-            >
-              <UserCog className="size-4" />
-              المستخدمون
-            </Link>
-          </>
-        ) : null}
+      <p className="text-sm text-muted-foreground">
+        المصممون ({formatNumber(stats.length)})
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((s) => (
+          <DesignerStatsCard
+            key={s.id}
+            stats={s}
+            selected={s.id === selectedId}
+            href={`/team?designer=${s.id}`}
+          />
+        ))}
       </div>
 
-      {tab === "designers" ? (
-        <>
-          <p className="text-sm text-muted-foreground">
-            المصممون ({formatNumber(stats.length)})
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((s) => (
-              <DesignerStatsCard
-                key={s.id}
-                stats={s}
-                selected={s.id === selectedId}
-                href={`/team?tab=designers&designer=${s.id}`}
-              />
-            ))}
-          </div>
-
-          {selected ? (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">
-                  الطلبات المسندة إلى: {selected.name}
-                </CardTitle>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-muted-foreground">
-                    عرض {formatNumber(Math.min(6, selectedRequests.length))} من{" "}
-                    {formatNumber(selectedRequests.length)} طلبات
-                  </span>
-                  <Link
-                    href={`/requests?designer=${selected.id}`}
-                    className="text-info hover:underline"
-                  >
-                    عرض جميع طلبات {selected.name} ‹
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  columns={requestColumns}
-                  rows={selectedRequests.slice(0, 6)}
-                  rowKey={(r) => r.request.id}
-                  rowClassName={(r) =>
-                    r.sla.delivery.state === "overdue" ? "bg-danger/5 hover:bg-danger/10" : undefined
-                  }
-                  empty={<EmptyState title="لا طلبات مسندة لهذا المصمم" />}
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            <p className="text-center text-sm text-muted-foreground">
-              اختر مصممًا لعرض طلباته المسندة.
-            </p>
-          )}
-        </>
-      ) : tab === "users" ? (
-        <UsersManager
-          users={managedUsers.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            departmentId: u.departmentId,
-            capacityPoints: u.capacityPoints,
-            isActive: u.isActive,
-          }))}
-          departments={allDepartments.map((d) => ({ id: d.id, name: d.name }))}
-          currentUserId={actor.id}
-          saveAction={saveUser}
-          toggleAction={toggleUserActive}
-        />
+      {selected ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">
+              الطلبات المسندة إلى: {selected.name}
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                عرض {formatNumber(Math.min(6, selectedRequests.length))} من{" "}
+                {formatNumber(selectedRequests.length)} طلبات
+              </span>
+              <Link
+                href={`/requests?designer=${selected.id}`}
+                className="text-info hover:underline"
+              >
+                عرض جميع طلبات {selected.name} ‹
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={requestColumns}
+              rows={selectedRequests.slice(0, 6)}
+              rowKey={(r) => r.request.id}
+              rowClassName={(r) =>
+                r.sla.delivery.state === "overdue" ? "bg-danger/5 hover:bg-danger/10" : undefined
+              }
+              empty={<EmptyState title="لا طلبات مسندة لهذا المصمم" />}
+            />
+          </CardContent>
+        </Card>
       ) : (
-        <SlaSettingsForm
-          types={types.map((t) => ({
-            id: t.id,
-            name: t.name,
-            effortPoints: t.effortPoints,
-            slaNormalH: t.slaNormalH,
-            slaHighH: t.slaHighH,
-            slaUrgentH: t.slaUrgentH,
-          }))}
-          settings={{
-            workDays: settingsRow.workDays,
-            workStart: settingsRow.workStart,
-            workEnd: settingsRow.workEnd,
-            holidays: settingsRow.holidays,
-            alertThresholdPct: settingsRow.alertThresholdPct,
-            autoCloseWorkDays: settingsRow.autoCloseWorkDays,
-            maxReviewRounds: settingsRow.maxReviewRounds,
-            loadLowPct: settingsRow.loadLowPct,
-            loadHighPct: settingsRow.loadHighPct,
-            responseSlaH: settingsRow.responseSlaH,
-          }}
-          action={saveSlaSettings}
-        />
+        <p className="text-center text-sm text-muted-foreground">
+          اختر مصممًا لعرض طلباته المسندة.
+        </p>
       )}
     </div>
   );

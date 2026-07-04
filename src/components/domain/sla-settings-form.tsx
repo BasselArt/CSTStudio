@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
-import type { SettingsState } from "@/app/(app)/team/actions";
+import type { SettingsState } from "@/app/(app)/settings/actions";
 
 const DAY_NAMES = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
