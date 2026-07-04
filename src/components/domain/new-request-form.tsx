@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DatePicker } from "@/components/domain/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -339,12 +340,13 @@ export function NewRequestForm({
               <Label htmlFor="publishDueDate">
                 تاريخ النشر المطلوب <span className="text-danger">*</span>
               </Label>
-              <Input
+              <DatePicker
                 id="publishDueDate"
                 name="publishDueDate"
-                type="date"
                 value={publishDueDate}
-                onChange={(e) => setPublishDueDate(e.target.value)}
+                onChange={setPublishDueDate}
+                placeholder="اختر تاريخ النشر"
+                aria-invalid={!!errors.publishDueDate}
               />
               <FieldError message={errors.publishDueDate} />
             </div>

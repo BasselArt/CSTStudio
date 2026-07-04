@@ -22,12 +22,46 @@ const timeFmt = new Intl.DateTimeFormat(LOCALE, {
 
 const numberFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 
+const monthYearFmt = new Intl.DateTimeFormat(LOCALE, {
+  month: "long",
+  year: "numeric",
+  timeZone: TZ,
+});
+
+const weekdayFmt = new Intl.DateTimeFormat(LOCALE, {
+  weekday: "narrow",
+  timeZone: TZ,
+});
+
+const dateKeyFmt = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: TZ,
+});
+
 type DateInput = Date | string;
 const toDate = (d: DateInput) => (d instanceof Date ? d : new Date(d));
 
 /** "15 يوليو 2026" */
 export function formatDate(d: DateInput): string {
   return dateFmt.format(toDate(d));
+}
+
+/** "يوليو 2026" — عنوان شهر التقويم */
+export function formatMonthYear(d: DateInput): string {
+  return monthYearFmt.format(toDate(d));
+}
+
+/** الحرف المختصر ليوم الأسبوع (0=الأحد … 6=السبت): "ح" "ن" … */
+export function weekdayNarrow(weekday: number): string {
+  // 2023-01-01 يوم أحد (بتوقيت الرياض أيضًا) — نزيح منه بعدد الأيام المطلوب
+  return weekdayFmt.format(new Date(Date.UTC(2023, 0, 1 + weekday)));
+}
+
+/** مفتاح التاريخ المحلي (الرياض) "YYYY-MM-DD" */
+export function formatDateKey(d: DateInput): string {
+  return dateKeyFmt.format(toDate(d));
 }
 
 /** "15 يوليو 2026 - 10:30 ص" */
