@@ -1,11 +1,17 @@
 "use server";
 
-// حفظ إعدادات SLA (للمسؤول فقط) — SPEC §12/05.
+// حفظ إعدادات SLA وإدارة المستخدمين (للمسؤول فقط) — SPEC §12/05.
 
 import { revalidatePath } from "next/cache";
 import { requireActor } from "@/lib/auth";
 import { updateRequestType, updateSettings } from "@/services/settings";
-import { requestTypeUpdateSchema, settingsSchema } from "@/services/schemas";
+import { createUser, setUserActive, updateUser } from "@/services/users";
+import {
+  requestTypeUpdateSchema,
+  settingsSchema,
+  userCreateSchema,
+  userUpdateSchema,
+} from "@/services/schemas";
 
 export interface SettingsState {
   error?: string;
@@ -61,5 +67,58 @@ export async function saveSlaSettings(
 
   revalidatePath("/team");
   revalidatePath("/");
+  return { success: true };
+}
+
+/** إنشاء مستخدم أو تعديله — وجود id يحدد العملية */
+export async function saveUser(
+  _prev: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const actor = await requireActor();
+
+  const raw = {
+    name: formData.get("name"),
+    email: formData.get("email"),
+    role: formData.get("role"),
+    departmentId: formData.get("departmentId"),
+    capacityPoints: formData.get("capacityPoints"),
+    password: formData.get("password"),
+  };
+  const id = formData.get("id");
+
+  try {
+    if (id) {
+      const parsed = userUpdateSchema.safeParse({ ...raw, id });
+      if (!parsed.success) return { error: parsed.error.issues[0].message };
+      await updateUser(parsed.data, actor);
+    } else {
+      const parsed = userCreateSchema.safeParse(raw);
+      if (!parsed.success) return { error: parsed.error.issues[0].message };
+      await createUser(parsed.data, actor);
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "تعذر الحفظ." };
+  }
+
+  revalidatePath("/team");
+  return { success: true };
+}
+
+export async function toggleUserActive(
+  _prev: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const actor = await requireActor();
+  const id = Number(formData.get("id"));
+  const isActive = formData.get("isActive") === "true";
+
+  try {
+    await setUserActive(id, isActive, actor);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "تعذر التنفيذ." };
+  }
+
+  revalidatePath("/team");
   return { success: true };
 }

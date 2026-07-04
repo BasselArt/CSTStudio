@@ -1,7 +1,7 @@
 // مخططات Zod — تُعرَّف مرة واحدة وتُستخدم في النموذج (client) وserver action معًا (SPEC §4.6).
 
 import { z } from "zod";
-import { PRIORITIES, STATUSES } from "@/core/constants";
+import { PRIORITIES, ROLES, STATUSES } from "@/core/constants";
 
 export const loginSchema = z.object({
   email: z.string().email("أدخل بريدًا إلكترونيًا صحيحًا."),
@@ -126,6 +126,49 @@ export const settingsSchema = z.object({
   path: ["workEnd"],
   message: "نهاية الدوام يجب أن تلي بدايته.",
 });
+
+const userFields = {
+  name: z.string().min(3, "أدخل الاسم الكامل.").max(100, "الاسم يتجاوز 100 حرف."),
+  email: z.string().email("أدخل بريدًا إلكترونيًا صحيحًا.").max(150),
+  role: z.enum(ROLES, "اختر الدور."),
+  departmentId: z.preprocess(
+    (v) => (v === "" || v == null ? null : Number(v)),
+    z.number().int().positive().nullable(),
+  ),
+  capacityPoints: z.coerce.number().int().min(1).max(200),
+};
+
+const requireRequesterDepartment = (
+  val: { role: string; departmentId: number | null },
+  ctx: z.RefinementCtx,
+) => {
+  if (val.role === "requester" && val.departmentId == null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["departmentId"],
+      message: "طالب الخدمة يجب أن يتبع جهة.",
+    });
+  }
+};
+
+export const userCreateSchema = z
+  .object({
+    ...userFields,
+    password: z.string().min(8, "كلمة المرور 8 أحرف على الأقل.").max(100),
+  })
+  .superRefine(requireRequesterDepartment);
+
+export const userUpdateSchema = z
+  .object({
+    ...userFields,
+    id: z.coerce.number().int().positive(),
+    /** فارغ = إبقاء كلمة المرور الحالية */
+    password: z.preprocess(
+      (v) => (v === "" || v == null ? undefined : v),
+      z.string().min(8, "كلمة المرور 8 أحرف على الأقل.").max(100).optional(),
+    ),
+  })
+  .superRefine(requireRequesterDepartment);
 
 export const requestTypeUpdateSchema = z.object({
   id: z.coerce.number().int().positive(),
