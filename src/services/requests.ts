@@ -18,7 +18,7 @@ import {
   TRANSITIONS,
 } from "@/core/state-machine";
 import { workingHoursBetween } from "@/core/calendar";
-import { computeSla, slaTargetHours } from "@/core/sla";
+import { computeSla, slaTargetHours, toolFactorFor } from "@/core/sla";
 import type {
   EventType,
   Priority,
@@ -211,7 +211,10 @@ export function slaFor(
     .map((e) => (e.data as { agreedTargetH?: number }).agreedTargetH)
     .find((v) => typeof v === "number");
 
-  let targetH = slaTargetHours(type, req.priority, !!req.urgentApprovedAt);
+  let targetH = slaTargetHours(type, req.priority, !!req.urgentApprovedAt, {
+    unitCount: req.unitCount,
+    toolFactor: toolFactorFor(req.tool, settingsRow.toolFactors),
+  });
   if (req.priority === "urgent" && req.urgentApprovedAt && targetH == null && agreedH) {
     targetH = agreedH;
   }
@@ -387,6 +390,8 @@ async function insertRequest(
         priority: data.priority,
         urgentJustification: data.urgentJustification,
         sizes: data.sizes,
+        unitCount: data.unitCount,
+        tool: data.tool,
         channel: data.channel,
         publishDueDate: data.publishDueDate,
         relatedRequestId: data.relatedRequestId,

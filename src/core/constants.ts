@@ -3,6 +3,7 @@
 
 import type {
   ColorToken,
+  DesignTool,
   EventType,
   LoadState,
   Priority,
@@ -116,6 +117,32 @@ export const LOAD_STATE_META: Record<LoadState, { label: string; color: ColorTok
   low: { label: "منخفض", color: "success" },
   normal: { label: "طبيعي", color: "info" },
   high: { label: "مرتفع", color: "warning" },
+};
+
+/** الترتيب الرسمي لأدوات التنفيذ (يحكم القوائم ونموذج الإعدادات) */
+export const DESIGN_TOOLS = [
+  "powerpoint",
+  "illustrator",
+  "photoshop",
+  "indesign",
+  "figma",
+  "canva",
+  "other",
+] as const satisfies readonly DesignTool[];
+
+/**
+ * أداة التنفيذ: التسمية + المعامل الافتراضي لهدف SLA.
+ * المعامل يضرب الهدف: 1 = الأساس (بوربوينت)، أقل من 1 = إنجاز أسرع.
+ * القيم الفعلية قابلة للتعديل من إعدادات SLA (settings.toolFactors).
+ */
+export const TOOL_META: Record<DesignTool, { label: string; defaultFactor: number }> = {
+  powerpoint: { label: "بوربوينت", defaultFactor: 1 },
+  illustrator: { label: "إليستريتور", defaultFactor: 0.85 },
+  photoshop: { label: "فوتوشوب", defaultFactor: 0.9 },
+  indesign: { label: "إن ديزاين", defaultFactor: 0.9 },
+  figma: { label: "فيقما", defaultFactor: 0.85 },
+  canva: { label: "كانفا", defaultFactor: 0.7 },
+  other: { label: "أخرى", defaultFactor: 1 },
 };
 
 /** عتبة «مستحق قريبًا»: المتبقي ≤ 24 ساعة عمل (SPEC §9) */

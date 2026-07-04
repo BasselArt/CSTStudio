@@ -37,6 +37,27 @@ export type SlaState =
 
 export type LoadState = "low" | "normal" | "high";
 
+/** أدوات التنفيذ المعتمدة — تسمياتها ومعاملاتها الافتراضية في core/constants.ts */
+export type DesignTool =
+  | "powerpoint"
+  | "illustrator"
+  | "photoshop"
+  | "indesign"
+  | "figma"
+  | "canva"
+  | "other";
+
+/** معاملات الأدوات المخصصة من الإعدادات — الغائب يسقط على الافتراضي */
+export type ToolFactors = Partial<Record<DesignTool, number>>;
+
+/** مدخلات تنويع هدف SLA حسب حجم الطلب وأداة التنفيذ (امتداد لمصفوفة §9) */
+export interface SlaSizing {
+  /** حجم الطلب بوحدات النوع (صفحات/شرائح/مواد) — null = لم يُحدَّد */
+  unitCount?: number | null;
+  /** معامل الأداة (1 = الأساس، أقل = أسرع) — يُستخرج عبر toolFactorFor */
+  toolFactor?: number | null;
+}
+
 /** مفاتيح ألوان الـ tokens المعرفة في globals.css — لا hex خارجها (SPEC §13) */
 export type ColorToken =
   | "navy"

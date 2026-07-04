@@ -29,10 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PRIORITIES, PRIORITY_META } from "@/core/constants";
+import { DESIGN_TOOLS, PRIORITIES, PRIORITY_META, TOOL_META } from "@/core/constants";
 import { addWorkingHours } from "@/core/calendar";
-import { slaTargetHours } from "@/core/sla";
-import type { CalendarCfg, Priority } from "@/core/types";
+import { slaTargetHours, toolFactorFor } from "@/core/sla";
+import type { CalendarCfg, DesignTool, Priority, ToolFactors } from "@/core/types";
 import { formatDate, formatWorkingDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { NewRequestState } from "@/app/(app)/requests/new/actions";
@@ -45,6 +45,9 @@ interface TypeOption {
   slaNormalH: number;
   slaHighH: number;
   slaUrgentH: number | null;
+  unitLabel: string | null;
+  baseUnits: number | null;
+  extraUnitH: number | null;
 }
 
 interface Option {
@@ -110,6 +113,7 @@ export function NewRequestForm({
   departments,
   types,
   cfg,
+  toolFactors,
   defaultDepartmentId,
   defaultTypeId,
   related,
@@ -119,6 +123,8 @@ export function NewRequestForm({
   departments: Option[];
   types: TypeOption[];
   cfg: CalendarCfg;
+  /** معاملات الأدوات من الإعدادات — للملخص الحي */
+  toolFactors: ToolFactors | null;
   defaultDepartmentId: number | null;
   defaultTypeId?: number | null;
   /** طلب أصلي يرتبط به هذا الطلب كـ«طلب تعديل» (SPEC §6) */
@@ -131,6 +137,8 @@ export function NewRequestForm({
 
   const [typeId, setTypeId] = useState<number | null>(defaultTypeId ?? null);
   const [priority, setPriority] = useState<Priority>("normal");
+  const [unitCount, setUnitCount] = useState("");
+  const [tool, setTool] = useState<DesignTool | "">("");
   const [publishDueDate, setPublishDueDate] = useState("");
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
@@ -139,18 +147,21 @@ export function NewRequestForm({
 
   const selectedType = types.find((t) => t.id === typeId) ?? null;
 
-  /* الملخص الحي عبر دوال core (SPEC §12/03) */
+  /* الملخص الحي عبر دوال core (SPEC §12/03) — يراعي الحجم وأداة التنفيذ */
   const summary = useMemo(() => {
     if (!selectedType) return null;
     // «عاجل» قبل الاعتماد يُحسب على مدة «عالي» (SPEC §9)
-    const targetH = slaTargetHours(selectedType, priority, false);
+    const targetH = slaTargetHours(selectedType, priority, false, {
+      unitCount: unitCount ? Number(unitCount) : null,
+      toolFactor: toolFactorFor(tool || null, toolFactors),
+    });
     if (targetH == null) return { targetH: null, expected: null, dueWarning: false };
     const expected = addWorkingHours(new Date(), targetH, cfg);
     const dueWarning = publishDueDate
       ? new Date(`${publishDueDate}T23:59:59+03:00`).getTime() < expected.getTime()
       : false;
     return { targetH, expected, dueWarning };
-  }, [selectedType, priority, publishDueDate, cfg]);
+  }, [selectedType, priority, unitCount, tool, toolFactors, publishDueDate, cfg]);
 
   return (
     <form action={formAction} className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
@@ -391,6 +402,52 @@ export function NewRequestForm({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {selectedType?.unitLabel ? (
+              <div className="space-y-2">
+                <Label htmlFor="unitCount">حجم الطلب (عدد {selectedType.unitLabel})</Label>
+                <Input
+                  id="unitCount"
+                  name="unitCount"
+                  type="number"
+                  min={1}
+                  max={1000}
+                  dir="ltr"
+                  value={unitCount}
+                  onChange={(e) => setUnitCount(e.target.value)}
+                  placeholder={selectedType.baseUnits ? String(selectedType.baseUnits) : ""}
+                />
+                {selectedType.baseUnits != null && selectedType.extraUnitH != null ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    الهدف الأساسي يغطي حتى {selectedType.baseUnits} {selectedType.unitLabel} —
+                    وكل وحدة إضافية تمدد المدة تلقائيًا.
+                  </p>
+                ) : null}
+                <FieldError message={errors.unitCount} />
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="tool">أداة التنفيذ المتوقعة</Label>
+              <input type="hidden" name="tool" value={tool} />
+              <Select
+                value={tool || undefined}
+                onValueChange={(v) => setTool(v as DesignTool)}
+              >
+                <SelectTrigger id="tool" className="w-full">
+                  <SelectValue placeholder="اختياري — تؤثر في مدة التنفيذ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DESIGN_TOOLS.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {TOOL_META[t].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError message={errors.tool} />
             </div>
           </div>
 

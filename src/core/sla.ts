@@ -1,16 +1,19 @@
 // محرك SLA — حساب عند القراءة من أحداث status_change، لا عدّادات مخزنة (SPEC §9).
 
 import { addWorkingHours, workingHoursBetween } from "./calendar";
-import { DUE_SOON_THRESHOLD_H, STATUS_META } from "./constants";
+import { DUE_SOON_THRESHOLD_H, STATUS_META, TOOL_META } from "./constants";
 import type {
   DeliverySla,
+  DesignTool,
   Priority,
   ResponseSla,
   SlaInput,
   SlaResult,
+  SlaSizing,
   SlaState,
   Status,
   StatusChange,
+  ToolFactors,
 } from "./types";
 
 interface Segment {
@@ -111,19 +114,50 @@ export interface SlaMatrixRow {
   slaNormalH: number;
   slaHighH: number;
   slaUrgentH: number | null;
+  /** الحجم المرجعي المشمول في هدف المصفوفة (null = النوع لا يُقاس بالوحدات) */
+  baseUnits?: number | null;
+  /** ساعات العمل المضافة لكل وحدة فوق الحجم المرجعي */
+  extraUnitH?: number | null;
+}
+
+/** معامل أداة التنفيذ: قيمة الإعدادات إن وُجدت وإلا الافتراضي — بلا أداة = 1 */
+export function toolFactorFor(
+  tool: DesignTool | null | undefined,
+  overrides?: ToolFactors | null,
+): number {
+  if (!tool) return 1;
+  return overrides?.[tool] ?? TOOL_META[tool].defaultFactor;
 }
 
 /**
- * هدف التسليم من مصفوفة النوع × الأولوية (SPEC §9).
- * قاعدة «عاجل»: قبل اعتماد المسؤول يُحسب على مدة «عالي»،
- * وبعد الاعتماد على مدة «عاجل» (null = باتفاق).
+ * هدف التسليم (SPEC §9 + تنويع الحجم/الأداة):
+ *   الهدف = (أساس المصفوفة + الوحدات فوق الحجم المرجعي × ساعة/وحدة) × معامل الأداة
+ * مقربًا لأقرب ساعة عمل (بحد أدنى ساعة).
+ * قاعدة «عاجل»: قبل اعتماد المسؤول يُحسب على مدة «عالي»، وبعد الاعتماد على
+ * مدة «عاجل» — وnull تعني «باتفاق»: المدة المتفق عليها تُدخل يدويًا للحجم
+ * الفعلي، فلا يطبَّق عليها الحجم ولا الأداة.
  */
 export function slaTargetHours(
   type: SlaMatrixRow,
   priority: Priority,
   urgentApproved: boolean,
+  sizing?: SlaSizing,
 ): number | null {
-  if (priority === "normal") return type.slaNormalH;
-  if (priority === "high") return type.slaHighH;
-  return urgentApproved ? type.slaUrgentH : type.slaHighH;
+  const baseH =
+    priority === "normal"
+      ? type.slaNormalH
+      : priority === "high"
+        ? type.slaHighH
+        : urgentApproved
+          ? type.slaUrgentH
+          : type.slaHighH;
+  if (baseH == null) return null;
+
+  const { unitCount, toolFactor } = sizing ?? {};
+  const extraUnits =
+    unitCount != null && type.baseUnits != null && type.extraUnitH != null
+      ? Math.max(0, unitCount - type.baseUnits)
+      : 0;
+  const sized = baseH + extraUnits * (type.extraUnitH ?? 0);
+  return Math.max(1, Math.round(sized * (toolFactor ?? 1)));
 }
