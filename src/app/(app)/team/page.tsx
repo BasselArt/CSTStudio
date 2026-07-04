@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Settings, Users } from "lucide-react";
+import { Settings, UserCog, Users } from "lucide-react";
 import { PriorityBadge, SlaBadge, StatusBadge } from "@/components/domain/badges";
 import { DataTable, type DataColumn } from "@/components/domain/data-table";
 import { DesignerStatsCard, type DesignerStats } from "@/components/domain/designer-stats-card";
 import { EmptyState } from "@/components/domain/empty-state";
 import { PageHeader } from "@/components/domain/page-header";
 import { SlaSettingsForm } from "@/components/domain/sla-settings-form";
+import { UsersManager } from "@/components/domain/users-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ACTIVE_STATUSES } from "@/core/constants";
 import { complianceRatePct } from "@/core/kpi";
@@ -17,9 +18,9 @@ import { requireActor } from "@/lib/auth";
 import { formatDate, formatNumber, formatRemaining } from "@/lib/format";
 import { listVisibleRequests, type EnrichedRequest } from "@/services/requests";
 import { getSettings, listRequestTypes } from "@/services/settings";
-import { listDesigners } from "@/services/users";
+import { listDepartments, listDesigners, listUsers } from "@/services/users";
 import { cn } from "@/lib/utils";
-import { saveSlaSettings } from "./actions";
+import { saveSlaSettings, saveUser, toggleUserActive } from "./actions";
 
 export default async function TeamPage({
   searchParams,
@@ -30,7 +31,11 @@ export default async function TeamPage({
   if (actor.role !== "studio_manager" && actor.role !== "executive") redirect("/");
 
   const sp = await searchParams;
-  const tab = sp.tab === "sla" && actor.role === "studio_manager" ? "sla" : "designers";
+  const managerTabs = ["sla", "users"] as const;
+  const tab =
+    actor.role === "studio_manager" && managerTabs.includes(sp.tab as (typeof managerTabs)[number])
+      ? (sp.tab as (typeof managerTabs)[number])
+      : "designers";
 
   const [designers, rows, settingsRow, types] = await Promise.all([
     listDesigners(),
@@ -38,6 +43,11 @@ export default async function TeamPage({
     getSettings(),
     listRequestTypes(),
   ]);
+
+  const [managedUsers, allDepartments] =
+    tab === "users"
+      ? await Promise.all([listUsers(actor), listDepartments()])
+      : [[], []];
 
   /* إحصائيات كل مصمم */
   const stats: DesignerStats[] = designers.map((d) => {
@@ -138,18 +148,32 @@ export default async function TeamPage({
           المصممون
         </Link>
         {actor.role === "studio_manager" ? (
-          <Link
-            href="/team?tab=sla"
-            className={cn(
-              "flex items-center gap-2 border-b-2 px-4 py-2 text-sm",
-              tab === "sla"
-                ? "border-navy font-medium text-navy"
-                : "border-transparent text-muted-foreground hover:text-navy",
-            )}
-          >
-            <Settings className="size-4" />
-            إعدادات SLA
-          </Link>
+          <>
+            <Link
+              href="/team?tab=sla"
+              className={cn(
+                "flex items-center gap-2 border-b-2 px-4 py-2 text-sm",
+                tab === "sla"
+                  ? "border-navy font-medium text-navy"
+                  : "border-transparent text-muted-foreground hover:text-navy",
+              )}
+            >
+              <Settings className="size-4" />
+              إعدادات SLA
+            </Link>
+            <Link
+              href="/team?tab=users"
+              className={cn(
+                "flex items-center gap-2 border-b-2 px-4 py-2 text-sm",
+                tab === "users"
+                  ? "border-navy font-medium text-navy"
+                  : "border-transparent text-muted-foreground hover:text-navy",
+              )}
+            >
+              <UserCog className="size-4" />
+              المستخدمون
+            </Link>
+          </>
         ) : null}
       </div>
 
@@ -206,6 +230,22 @@ export default async function TeamPage({
             </p>
           )}
         </>
+      ) : tab === "users" ? (
+        <UsersManager
+          users={managedUsers.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            departmentId: u.departmentId,
+            capacityPoints: u.capacityPoints,
+            isActive: u.isActive,
+          }))}
+          departments={allDepartments.map((d) => ({ id: d.id, name: d.name }))}
+          currentUserId={actor.id}
+          saveAction={saveUser}
+          toggleAction={toggleUserActive}
+        />
       ) : (
         <SlaSettingsForm
           types={types.map((t) => ({

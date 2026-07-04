@@ -96,6 +96,13 @@ export const SLA_STATE_META: Record<SlaState, { label: string; color: ColorToken
   stopped: { label: "منتهٍ", color: "muted" },
 };
 
+export const ROLES = [
+  "requester",
+  "studio_manager",
+  "designer",
+  "executive",
+] as const satisfies readonly Role[];
+
 export const ROLE_META: Record<Role, { label: string }> = {
   requester: { label: "طالب الخدمة" },
   designer: { label: "مصمم" },
