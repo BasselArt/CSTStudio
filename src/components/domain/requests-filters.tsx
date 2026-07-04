@@ -37,8 +37,12 @@ function FilterSelect({
 }) {
   return (
     <Select value={value || ALL} onValueChange={(v) => onChange(param, v === ALL ? "" : v)}>
-      <SelectTrigger className="w-full bg-card sm:w-44" aria-label={placeholder}>
-        <div className="flex flex-col items-start">
+      {/* سطران (تسمية + قيمة) لا يتسعان في h-8 الافتراضي — ارتفاع تلقائي مع padding مريح */}
+      <SelectTrigger
+        className="w-full bg-card py-1.5 ps-3 data-[size=default]:h-auto sm:w-44"
+        aria-label={placeholder}
+      >
+        <div className="flex flex-col items-start gap-0.5">
           <span className="text-[10px] text-muted-foreground">{placeholder}</span>
           <SelectValue />
         </div>

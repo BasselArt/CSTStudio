@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Direction } from "radix-ui";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className={cn("font-sans", plexArabic.variable)}>
-      <body className="antialiased">{children}</body>
+      {/* Radix يفترض ltr داخليًا ما لم يُغلَّف بمزوّد الاتجاه — بدونه تنقلب مكونات Select وDropdown */}
+      <body className="antialiased">
+        <Direction.Provider dir="rtl">{children}</Direction.Provider>
+      </body>
     </html>
   );
 }
