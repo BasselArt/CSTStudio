@@ -152,10 +152,10 @@ async function main() {
   const typeRows = db
     .insert(requestTypes)
     .values([
-      { name: "تعديل بسيط", effortPoints: 1, slaNormalH: 8, slaHighH: 4, slaUrgentH: 2, sortOrder: 1 },
-      { name: "تصميم بسيط", effortPoints: 2, slaNormalH: 8, slaHighH: 6, slaUrgentH: 4, unitLabel: "مادة", baseUnits: 1, extraUnitH: 2, sortOrder: 2 },
-      { name: "تصميم متوسط", effortPoints: 5, slaNormalH: 24, slaHighH: 16, slaUrgentH: 8, unitLabel: "صفحة/شريحة", baseUnits: 5, extraUnitH: 1.5, sortOrder: 3 },
-      { name: "تصميم كبير", effortPoints: 10, slaNormalH: 40, slaHighH: 32, slaUrgentH: null, unitLabel: "صفحة/شريحة", baseUnits: 10, extraUnitH: 2, sortOrder: 4 },
+      { name: "تعديل بسيط", description: "تعديلات على تصميم حالي أو تصحيح فني", effortPoints: 1, slaNormalH: 8, slaHighH: 4, slaUrgentH: 2, sortOrder: 1 },
+      { name: "تصميم بسيط", description: "تصاميم أحادية أو مواد تواصل بسيطة", effortPoints: 2, slaNormalH: 8, slaHighH: 6, slaUrgentH: 4, unitLabel: "مادة", baseUnits: 1, extraUnitH: 2, sortOrder: 2 },
+      { name: "تصميم متوسط", description: "تصاميم متعددة الصفحات أو مواد ترويجية متكاملة", effortPoints: 5, slaNormalH: 24, slaHighH: 16, slaUrgentH: 8, unitLabel: "صفحة/شريحة", baseUnits: 5, extraUnitH: 1.5, sortOrder: 3 },
+      { name: "تصميم كبير", description: "مشاريع معقدة متعددة الشاشات أو الحملات المتكاملة", effortPoints: 10, slaNormalH: 40, slaHighH: 32, slaUrgentH: null, unitLabel: "صفحة/شريحة", baseUnits: 10, extraUnitH: 2, sortOrder: 4 },
     ])
     .returning()
     .all();

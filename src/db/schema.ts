@@ -24,6 +24,8 @@ export const users = sqliteTable("users", {
 export const requestTypes = sqliteTable("request_types", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
+  /** وصف قصير يظهر في بطاقة اختيار النوع بنموذج الطلب الجديد */
+  description: text("description"),
   effortPoints: integer("effort_points").notNull(),
   slaNormalH: integer("sla_normal_h").notNull(),
   slaHighH: integer("sla_high_h").notNull(),

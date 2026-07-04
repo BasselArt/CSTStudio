@@ -1,10 +1,10 @@
 // قراءة وتحديث الإعدادات وأنواع الطلبات (مصفوفة SLA).
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { requestTypes, settings } from "@/db/schema";
+import { requests, requestTypes, settings } from "@/db/schema";
 import type { CalendarCfg, Role } from "@/core/types";
-import { settingsSchema, requestTypeUpdateSchema } from "./schemas";
+import { settingsSchema, requestTypeCreateSchema, requestTypeUpdateSchema } from "./schemas";
 import type { z } from "zod";
 
 export type SettingsRow = typeof settings.$inferSelect;
@@ -60,4 +60,37 @@ export async function updateRequestType(
   assertManager(actorRole);
   const { id, ...data } = requestTypeUpdateSchema.parse(input);
   await db.update(requestTypes).set(data).where(eq(requestTypes.id, id));
+}
+
+/** عدد الطلبات المرتبطة بكل نوع — يحدد إمكانية حذف النوع من الإعدادات */
+export async function countRequestsByType(): Promise<Record<number, number>> {
+  const rows = await db
+    .select({ typeId: requests.typeId, n: sql<number>`count(*)` })
+    .from(requests)
+    .groupBy(requests.typeId);
+  return Object.fromEntries(rows.map((r) => [r.typeId, r.n]));
+}
+
+export async function createRequestType(
+  input: z.infer<typeof requestTypeCreateSchema>,
+  actorRole: Role,
+): Promise<void> {
+  assertManager(actorRole);
+  const data = requestTypeCreateSchema.parse(input);
+  const existing = await listRequestTypes();
+  if (existing.some((t) => t.name === data.name)) {
+    throw new Error("يوجد نوع بهذا الاسم بالفعل.");
+  }
+  const maxSort = existing.reduce((m, t) => Math.max(m, t.sortOrder), 0);
+  await db.insert(requestTypes).values({ ...data, sortOrder: maxSort + 1 });
+}
+
+export async function deleteRequestType(id: number, actorRole: Role): Promise<void> {
+  assertManager(actorRole);
+  const used = await db.query.requests.findFirst({
+    where: eq(requests.typeId, id),
+    columns: { id: true },
+  });
+  if (used) throw new Error("لا يمكن حذف نوع مرتبط بطلبات قائمة.");
+  await db.delete(requestTypes).where(eq(requestTypes.id, id));
 }

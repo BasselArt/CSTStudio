@@ -2,12 +2,20 @@
 
 // نموذج إعدادات SLA (SPEC §12/05): المصفوفة + تقويم العمل + قواعد التشغيل.
 
-import { useActionState, useState } from "react";
-import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2, Wrench, X } from "lucide-react";
+import { useActionState, useState, useTransition } from "react";
+import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2, Trash2, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/domain/date-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,9 +26,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DESIGN_TOOLS, TOOL_META } from "@/core/constants";
+import { DESIGN_TOOLS, PRIORITY_META, TOOL_META, WORK_DAY_HOURS } from "@/core/constants";
 import type { ToolFactors } from "@/core/types";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import type { SettingsState } from "@/app/(app)/settings/actions";
 
 const DAY_NAMES = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -28,6 +36,9 @@ const DAY_NAMES = ["الأحد", "الاثنين", "الثلاثاء", "الأر
 interface TypeRow {
   id: number;
   name: string;
+  description: string | null;
+  /** عدد الطلبات المرتبطة — نوع مرتبط بطلبات لا يُحذف */
+  requestCount: number;
   effortPoints: number;
   slaNormalH: number;
   slaHighH: number;
@@ -79,29 +90,77 @@ export function SlaSettingsForm({
   types,
   settings,
   action,
+  addAction,
+  deleteAction,
 }: {
   types: TypeRow[];
   settings: SettingsValues;
   action: (prev: SettingsState, formData: FormData) => Promise<SettingsState>;
+  addAction: (prev: SettingsState, formData: FormData) => Promise<SettingsState>;
+  deleteAction: (prev: SettingsState, formData: FormData) => Promise<SettingsState>;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const [holidays, setHolidays] = useState<string[]>(settings.holidays);
   const [newHoliday, setNewHoliday] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [addState, addFormAction, addPending] = useActionState(
+    async (prev: SettingsState, formData: FormData) => {
+      const result = await addAction(prev, formData);
+      if (result.success) setAddOpen(false);
+      return result;
+    },
+    {},
+  );
+  const [deleteState, setDeleteState] = useState<SettingsState>({});
+  const [deletePending, startDelete] = useTransition();
+
+  const handleDeleteType = (t: TypeRow) => {
+    if (!window.confirm(`حذف نوع «${t.name}» نهائيًا؟`)) return;
+    startDelete(async () => {
+      const fd = new FormData();
+      fd.set("id", String(t.id));
+      setDeleteState(await deleteAction({}, fd));
+    });
+  };
 
   return (
+    <>
     <form action={formAction} className="flex flex-col gap-5">
       {/* مصفوفة SLA */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Table2 className="size-4" />
-            مصفوفة أهداف SLA (النوع × الأولوية)
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            المدد بساعات العمل — اترك «عاجل» فارغًا ليكون «باتفاق» يُدخل عند الاعتماد.
-            أعمدة الحجم توسّع الهدف تلقائيًا: كل وحدة فوق «الحجم الأساسي» تضيف
-            «ساعات/وحدة» — اترك وحدة الحجم فارغة لتعطيل ذلك للنوع.
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Table2 className="size-4" />
+              مصفوفة أهداف SLA (النوع × الأولوية)
+            </CardTitle>
+            <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setAddOpen(true)}>
+              <Plus className="size-3.5" />
+              إضافة نوع جديد
+            </Button>
+          </div>
+          <div className="space-y-1.5 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">
+              كل صف نوع تصميم، وكل عمود أولوية — والقيمة هي المدة المستهدفة للتسليم
+              بساعات العمل من لحظة جاهزية الطلب للتنفيذ.
+            </p>
+            <ul className="list-disc space-y-1 ps-4">
+              <li>
+                مثال: «تصميم متوسط» بأولوية «{PRIORITY_META.normal.label}» هدفه 24 ساعة عمل ≈ 3
+                أيام (يوم العمل {WORK_DAY_HOURS} ساعات).
+              </li>
+              <li>
+                خانة «{PRIORITY_META.urgent.label}» الفارغة تعني «باتفاق»: المدة تُدخل يدويًا عند
+                اعتماد الطلب العاجل — وقبل الاعتماد يُحسب الهدف على مدة «{PRIORITY_META.high.label}».
+              </li>
+              <li>
+                أعمدة الحجم توسّع الهدف تلقائيًا: كل وحدة فوق «الحجم الأساسي» تضيف
+                «ساعات/وحدة» — اترك وحدة الحجم فارغة إن كان النوع لا يُقاس بالوحدات.
+              </li>
+              <li>«نقاط الجهد» لا تدخل في المدة — تُستخدم لحساب حمل المصمم وسعته.</li>
+              <li>الهدف الناتج يُضرب أخيرًا في معامل أداة التنفيذ المختارة في الطلب (البطاقة التالية).</li>
+            </ul>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -110,20 +169,32 @@ export function SlaSettingsForm({
                 <TableRow>
                   <TableHead className="text-start">نوع التصميم</TableHead>
                   <TableHead className="text-start">نقاط الجهد</TableHead>
-                  <TableHead className="text-start">عادي</TableHead>
-                  <TableHead className="text-start">عالي</TableHead>
-                  <TableHead className="text-start">عاجل</TableHead>
+                  <TableHead className="text-start">{PRIORITY_META.normal.label}</TableHead>
+                  <TableHead className="text-start">{PRIORITY_META.high.label}</TableHead>
+                  <TableHead className="text-start">{PRIORITY_META.urgent.label}</TableHead>
                   <TableHead className="text-start">وحدة الحجم</TableHead>
                   <TableHead className="text-start">الحجم الأساسي</TableHead>
                   <TableHead className="text-start">ساعات/وحدة إضافية</TableHead>
+                  <TableHead className="text-start">
+                    <span className="sr-only">حذف النوع</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {types.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">
-                      {t.name}
                       <input type="hidden" name="typeId" value={t.id} />
+                      <div className="flex flex-col gap-1">
+                        <span>{t.name}</span>
+                        <Input
+                          name={`type-${t.id}-description`}
+                          defaultValue={t.description ?? ""}
+                          placeholder="وصف قصير يظهر لطالب الخدمة"
+                          className="h-8 w-44 text-xs font-normal"
+                          aria-label={`وصف ${t.name}`}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Input
@@ -204,11 +275,40 @@ export function SlaSettingsForm({
                         aria-label={`ساعات الوحدة الإضافية ${t.name}`}
                       />
                     </TableCell>
+                    <TableCell>
+                      {t.requestCount > 0 ? (
+                        <span
+                          className="whitespace-nowrap text-xs text-muted-foreground"
+                          title="لا يمكن حذف نوع مرتبط بطلبات قائمة"
+                        >
+                          مستخدم في {formatNumber(t.requestCount)} من الطلبات
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletePending}
+                          className="gap-1 text-muted-foreground hover:text-danger"
+                          aria-label={`حذف نوع ${t.name}`}
+                          onClick={() => handleDeleteType(t)}
+                        >
+                          <Trash2 className="size-3.5" />
+                          حذف
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+          {deleteState.error ? (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-danger" role="alert">
+              <Info className="size-4" />
+              {deleteState.error}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -363,5 +463,74 @@ export function SlaSettingsForm({
         ) : null}
       </div>
     </form>
+
+    <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>إضافة نوع تصميم جديد</DialogTitle>
+          <DialogDescription>
+            يظهر النوع فورًا في نموذج «طلب جديد» وفي المصفوفة، ويمكن تعديل قيمه لاحقًا من هنا.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form action={addFormAction} className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-name">اسم النوع</Label>
+              <Input id="new-type-name" name="name" placeholder="مثال: موشن جرافيك" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-effort">نقاط الجهد (لحمل المصمم)</Label>
+              <Input id="new-type-effort" name="effortPoints" type="number" min={1} defaultValue={2} dir="ltr" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="new-type-description">وصف قصير (يظهر لطالب الخدمة)</Label>
+              <Input
+                id="new-type-description"
+                name="description"
+                placeholder="مثال: مقاطع متحركة قصيرة للمنصات الاجتماعية"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-normal">هدف «{PRIORITY_META.normal.label}» (ساعات عمل)</Label>
+              <Input id="new-type-normal" name="slaNormalH" type="number" min={1} defaultValue={8} dir="ltr" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-high">هدف «{PRIORITY_META.high.label}» (ساعات عمل)</Label>
+              <Input id="new-type-high" name="slaHighH" type="number" min={1} defaultValue={6} dir="ltr" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-urgent">هدف «{PRIORITY_META.urgent.label}» (ساعات عمل)</Label>
+              <Input id="new-type-urgent" name="slaUrgentH" type="number" min={1} placeholder="فارغ = باتفاق" dir="ltr" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-unit">وحدة الحجم (اختياري)</Label>
+              <Input id="new-type-unit" name="unitLabel" placeholder="صفحة/شريحة/ثانية" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-base">الحجم الأساسي المشمول بالهدف</Label>
+              <Input id="new-type-base" name="baseUnits" type="number" min={1} placeholder="—" dir="ltr" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-type-extra">ساعات لكل وحدة إضافية</Label>
+              <Input id="new-type-extra" name="extraUnitH" type="number" min={0.25} step={0.25} placeholder="—" dir="ltr" />
+            </div>
+          </div>
+
+          {addState.error ? (
+            <p className="flex items-center gap-1.5 text-sm text-danger" role="alert">
+              <Info className="size-4" />
+              {addState.error}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button type="submit" disabled={addPending}>
+              {addPending ? "جارٍ الإضافة…" : "إضافة النوع"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

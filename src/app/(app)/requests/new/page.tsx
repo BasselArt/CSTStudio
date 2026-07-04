@@ -9,14 +9,6 @@ import { getSettings, listRequestTypes, toCalendarCfg } from "@/services/setting
 import { listDepartments } from "@/services/users";
 import { submitNewRequest } from "./actions";
 
-/** وصف قصير لكل نوع في بطاقات الاختيار (صورة 03) */
-const TYPE_DESCRIPTIONS: Record<string, string> = {
-  "تعديل بسيط": "تعديلات على تصميم حالي أو تصحيح فني",
-  "تصميم بسيط": "تصاميم أحادية أو مواد تواصل بسيطة",
-  "تصميم متوسط": "تصاميم متعددة الصفحات أو مواد ترويجية متكاملة",
-  "تصميم كبير": "مشاريع معقدة متعددة الشاشات أو الحملات المتكاملة",
-};
-
 export default async function NewRequestPage({
   searchParams,
 }: {
@@ -58,7 +50,7 @@ export default async function NewRequestPage({
         types={types.map((t) => ({
           id: t.id,
           name: t.name,
-          description: TYPE_DESCRIPTIONS[t.name] ?? "",
+          description: t.description ?? "",
           effortPoints: t.effortPoints,
           slaNormalH: t.slaNormalH,
           slaHighH: t.slaHighH,

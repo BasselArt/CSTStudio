@@ -193,8 +193,12 @@ export const userUpdateSchema = z
   })
   .superRefine(requireRequesterDepartment);
 
-export const requestTypeUpdateSchema = z.object({
-  id: z.coerce.number().int().positive(),
+const requestTypeFields = {
+  /** فارغ = بلا وصف في بطاقة اختيار النوع */
+  description: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    z.string().trim().max(120, "وصف النوع يتجاوز 120 حرفًا.").nullable(),
+  ),
   effortPoints: z.coerce.number().int().min(1).max(100),
   slaNormalH: z.coerce.number().int().min(1).max(400),
   slaHighH: z.coerce.number().int().min(1).max(400),
@@ -220,4 +224,14 @@ export const requestTypeUpdateSchema = z.object({
       .max(40, "ساعات الوحدة الإضافية لا تتجاوز 40.")
       .nullable(),
   ),
+};
+
+export const requestTypeUpdateSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  ...requestTypeFields,
+});
+
+export const requestTypeCreateSchema = z.object({
+  name: z.string().trim().min(2, "اسم النوع حرفان على الأقل.").max(40, "اسم النوع يتجاوز 40 حرفًا."),
+  ...requestTypeFields,
 });
