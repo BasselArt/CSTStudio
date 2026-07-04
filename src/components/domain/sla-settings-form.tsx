@@ -7,6 +7,7 @@ import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/domain/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -218,12 +219,11 @@ export function SlaSettingsForm({
                 </span>
               ))}
               <div className="flex items-center gap-2">
-                <Input
-                  type="date"
+                <DatePicker
                   value={newHoliday}
-                  onChange={(e) => setNewHoliday(e.target.value)}
-                  dir="ltr"
-                  className="w-40"
+                  onChange={setNewHoliday}
+                  className="w-52"
+                  placeholder="تاريخ إجازة جديدة"
                   aria-label="تاريخ إجازة جديدة"
                 />
                 <Button
