@@ -255,6 +255,9 @@ export default async function TeamPage({
             slaNormalH: t.slaNormalH,
             slaHighH: t.slaHighH,
             slaUrgentH: t.slaUrgentH,
+            unitLabel: t.unitLabel,
+            baseUnits: t.baseUnits,
+            extraUnitH: t.extraUnitH,
           }))}
           settings={{
             workDays: settingsRow.workDays,
@@ -267,6 +270,7 @@ export default async function TeamPage({
             loadLowPct: settingsRow.loadLowPct,
             loadHighPct: settingsRow.loadHighPct,
             responseSlaH: settingsRow.responseSlaH,
+            toolFactors: settingsRow.toolFactors,
           }}
           action={saveSlaSettings}
         />

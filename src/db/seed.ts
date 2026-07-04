@@ -19,7 +19,8 @@ import {
   users,
 } from "./schema";
 import { addWorkingHours, workingHoursBetween } from "@/core/calendar";
-import type { CalendarCfg, Priority, Status } from "@/core/types";
+import { DESIGN_TOOLS, TOOL_META } from "@/core/constants";
+import type { CalendarCfg, DesignTool, Priority, Status } from "@/core/types";
 
 const DEV_PASSWORD = "Cst@2026"; // موثقة في README — للتطوير فقط
 
@@ -82,6 +83,10 @@ interface SeedRequest {
   goal?: string;
   audience?: string;
   sizes?: string;
+  /** حجم الطلب بوحدات النوع — يوسّع هدف SLA */
+  unitCount?: number;
+  /** أداة التنفيذ — معاملها يدخل في هدف SLA */
+  tool?: DesignTool;
   channel?: string;
   publishDueWorkH?: number;
   urgentJustification?: string;
@@ -137,6 +142,9 @@ async function main() {
       loadLowPct: 40,
       loadHighPct: 75,
       responseSlaH: 4,
+      toolFactors: Object.fromEntries(
+        DESIGN_TOOLS.map((t) => [t, TOOL_META[t].defaultFactor]),
+      ),
     })
     .run();
 
@@ -145,9 +153,9 @@ async function main() {
     .insert(requestTypes)
     .values([
       { name: "تعديل بسيط", effortPoints: 1, slaNormalH: 8, slaHighH: 4, slaUrgentH: 2, sortOrder: 1 },
-      { name: "تصميم بسيط", effortPoints: 2, slaNormalH: 8, slaHighH: 6, slaUrgentH: 4, sortOrder: 2 },
-      { name: "تصميم متوسط", effortPoints: 5, slaNormalH: 24, slaHighH: 16, slaUrgentH: 8, sortOrder: 3 },
-      { name: "تصميم كبير", effortPoints: 10, slaNormalH: 40, slaHighH: 32, slaUrgentH: null, sortOrder: 4 },
+      { name: "تصميم بسيط", effortPoints: 2, slaNormalH: 8, slaHighH: 6, slaUrgentH: 4, unitLabel: "مادة", baseUnits: 1, extraUnitH: 2, sortOrder: 2 },
+      { name: "تصميم متوسط", effortPoints: 5, slaNormalH: 24, slaHighH: 16, slaUrgentH: 8, unitLabel: "صفحة/شريحة", baseUnits: 5, extraUnitH: 1.5, sortOrder: 3 },
+      { name: "تصميم كبير", effortPoints: 10, slaNormalH: 40, slaHighH: 32, slaUrgentH: null, unitLabel: "صفحة/شريحة", baseUnits: 10, extraUnitH: 2, sortOrder: 4 },
     ])
     .returning()
     .all();
@@ -236,7 +244,8 @@ async function main() {
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
       typeName: "تصميم متوسط", priority: "urgent", ageH: 2, steps: [],
       urgentJustification: "توجيه من معالي المحافظ بعقد مؤتمر صحفي خلال 48 ساعة.",
-      sizes: "3000x2000، A5", channel: "فعاليات", publishDueWorkH: 16,
+      sizes: "3000x2000، A5", unitCount: 12, tool: "illustrator",
+      channel: "فعاليات", publishDueWorkH: 16,
     }),
     // --- تحتاج استكمال
     R({
@@ -328,7 +337,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      sizes: "A4", channel: "مطبوعات وPDF", publishDueWorkH: 26,
+      // 8 صفحات بإن ديزاين: (24 + 3×1.5) × 0.9 = 26 ساعة — تبقى «مستحقة قريبًا»
+      sizes: "A4", unitCount: 8, tool: "indesign",
+      channel: "مطبوعات وPDF", publishDueWorkH: 26,
     }),
     R({
       title: "عرض تقديمي لورشة الحوكمة",
@@ -340,7 +351,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      sizes: "1920x1080", channel: "عروض تقديمية", publishDueWorkH: 18,
+      // عرض 30 شريحة: الهدف يتمدد من 16 إلى (16 + 25×1.5) × 1 = 54 ساعة
+      sizes: "1920x1080", unitCount: 30, tool: "powerpoint",
+      channel: "عروض تقديمية", publishDueWorkH: 18,
     }),
     R({
       title: "حملة التوظيف السنوية",
@@ -378,7 +391,8 @@ async function main() {
       ],
       urgentJustification: "العرض أمام اللجنة التنفيذية صباح الغد.",
       urgentApprovedAfterH: 0.75,
-      sizes: "1920x1080", channel: "عروض تقديمية", publishDueWorkH: 8,
+      sizes: "1920x1080", unitCount: 1, tool: "powerpoint",
+      channel: "عروض تقديمية", publishDueWorkH: 8,
     }),
     R({
       title: "تعديل نموذج خطاب رسمي",
@@ -605,7 +619,9 @@ async function main() {
         { to: "delivered", afterH: 30 },
         { to: "closed", afterH: 60 },
       ],
-      sizes: "A4", channel: "مطبوعات وPDF", publishDueWorkH: 48,
+      // تقرير 20 صفحة بإن ديزاين: (24 + 15×1.5) × 0.9 = 42 ساعة
+      sizes: "A4", unitCount: 20, tool: "indesign",
+      channel: "مطبوعات وPDF", publishDueWorkH: 48,
     }),
     R({
       title: "منشور إعلان صيانة الأنظمة",
@@ -710,6 +726,8 @@ async function main() {
         status,
         assigneeId: designer?.id ?? null,
         sizes: spec.sizes,
+        unitCount: spec.unitCount,
+        tool: spec.tool,
         channel: spec.channel,
         publishDueDate: spec.publishDueWorkH
           ? iso(addWorkingHours(createdAt, spec.publishDueWorkH, cfg)).slice(0, 10)

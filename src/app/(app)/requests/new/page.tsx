@@ -63,8 +63,12 @@ export default async function NewRequestPage({
           slaNormalH: t.slaNormalH,
           slaHighH: t.slaHighH,
           slaUrgentH: t.slaUrgentH,
+          unitLabel: t.unitLabel,
+          baseUnits: t.baseUnits,
+          extraUnitH: t.extraUnitH,
         }))}
         cfg={toCalendarCfg(settingsRow)}
+        toolFactors={settingsRow.toolFactors}
         defaultDepartmentId={actor.departmentId}
         requesterName={actor.name}
         action={submitNewRequest}

@@ -3,6 +3,7 @@
 // حفظ إعدادات SLA وإدارة المستخدمين (للمسؤول فقط) — SPEC §12/05.
 
 import { revalidatePath } from "next/cache";
+import { DESIGN_TOOLS } from "@/core/constants";
 import { requireActor } from "@/lib/auth";
 import { updateRequestType, updateSettings } from "@/services/settings";
 import { createUser, setUserActive, updateUser } from "@/services/users";
@@ -35,6 +36,9 @@ export async function saveSlaSettings(
     loadLowPct: formData.get("loadLowPct"),
     loadHighPct: formData.get("loadHighPct"),
     responseSlaH: formData.get("responseSlaH"),
+    toolFactors: Object.fromEntries(
+      DESIGN_TOOLS.map((tool) => [tool, formData.get(`tool-${tool}-factor`)]),
+    ),
   };
 
   const parsedSettings = settingsSchema.safeParse(settingsInput);
@@ -51,6 +55,9 @@ export async function saveSlaSettings(
       slaNormalH: formData.get(`type-${id}-slaNormalH`),
       slaHighH: formData.get(`type-${id}-slaHighH`),
       slaUrgentH: formData.get(`type-${id}-slaUrgentH`),
+      unitLabel: formData.get(`type-${id}-unitLabel`),
+      baseUnits: formData.get(`type-${id}-baseUnits`),
+      extraUnitH: formData.get(`type-${id}-extraUnitH`),
     });
     if (!parsed.success) {
       return { error: `مصفوفة SLA: ${parsed.error.issues[0].message}` };

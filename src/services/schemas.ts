@@ -1,7 +1,7 @@
 // مخططات Zod — تُعرَّف مرة واحدة وتُستخدم في النموذج (client) وserver action معًا (SPEC §4.6).
 
 import { z } from "zod";
-import { PRIORITIES, ROLES, STATUSES } from "@/core/constants";
+import { DESIGN_TOOLS, PRIORITIES, ROLES, STATUSES } from "@/core/constants";
 
 export const loginSchema = z.object({
   email: z.string().email("أدخل بريدًا إلكترونيًا صحيحًا."),
@@ -41,6 +41,21 @@ export const createRequestSchema = z.object({
     .string()
     .min(2, "أدخل المقاسات المطلوبة.")
     .max(200, "المقاسات تتجاوز 200 حرف."),
+  /** حجم الطلب بوحدات النوع (صفحات/شرائح) — اختياري، يوسّع هدف SLA */
+  unitCount: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : Number(v)),
+    z
+      .number("أدخل عددًا صحيحًا.")
+      .int("أدخل عددًا صحيحًا.")
+      .min(1, "الحجم وحدة واحدة على الأقل.")
+      .max(1000, "الحجم يتجاوز 1000 وحدة.")
+      .optional(),
+  ),
+  /** أداة التنفيذ المتوقعة — اختيارية، معاملها يدخل في هدف SLA */
+  tool: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.enum(DESIGN_TOOLS, "اختر أداة تنفيذ صحيحة.").optional(),
+  ),
   channel: z.string().min(2, "اختر قناة الاستخدام.").max(100),
   priority: z.enum(PRIORITIES, "اختر الأولوية."),
   urgentJustification: optionalText(500),
@@ -117,6 +132,14 @@ export const settingsSchema = z.object({
   loadLowPct: z.coerce.number().int().min(1).max(100),
   loadHighPct: z.coerce.number().int().min(1).max(100),
   responseSlaH: z.coerce.number().int().min(1).max(40),
+  /** معاملات أدوات التنفيذ: 1 = الأساس — بين 0.25 و4 */
+  toolFactors: z.record(
+    z.enum(DESIGN_TOOLS),
+    z.coerce
+      .number("معامل الأداة رقم.")
+      .min(0.25, "معامل الأداة لا يقل عن 0.25.")
+      .max(4, "معامل الأداة لا يتجاوز 4."),
+  ),
 })
 .refine((v) => v.loadLowPct < v.loadHighPct, {
   path: ["loadHighPct"],
@@ -179,5 +202,22 @@ export const requestTypeUpdateSchema = z.object({
   slaUrgentH: z.preprocess(
     (v) => (v === "" || v == null ? null : Number(v)),
     z.number().int().min(1).max(400).nullable(),
+  ),
+  /** فارغ = النوع لا يُقاس بالوحدات (يعطّل امتداد الحجم) */
+  unitLabel: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    z.string().max(30, "وحدة الحجم تتجاوز 30 حرفًا.").nullable(),
+  ),
+  baseUnits: z.preprocess(
+    (v) => (v === "" || v == null ? null : Number(v)),
+    z.number().int().min(1).max(1000).nullable(),
+  ),
+  extraUnitH: z.preprocess(
+    (v) => (v === "" || v == null ? null : Number(v)),
+    z
+      .number("ساعات الوحدة الإضافية رقم.")
+      .min(0.25, "ساعات الوحدة الإضافية لا تقل عن 0.25.")
+      .max(40, "ساعات الوحدة الإضافية لا تتجاوز 40.")
+      .nullable(),
   ),
 });

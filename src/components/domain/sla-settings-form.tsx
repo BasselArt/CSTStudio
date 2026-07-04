@@ -3,7 +3,7 @@
 // نموذج إعدادات SLA (SPEC §12/05): المصفوفة + تقويم العمل + قواعد التشغيل.
 
 import { useActionState, useState } from "react";
-import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DESIGN_TOOLS, TOOL_META } from "@/core/constants";
+import type { ToolFactors } from "@/core/types";
 import { formatDate } from "@/lib/format";
 import type { SettingsState } from "@/app/(app)/team/actions";
 
@@ -30,6 +32,9 @@ interface TypeRow {
   slaNormalH: number;
   slaHighH: number;
   slaUrgentH: number | null;
+  unitLabel: string | null;
+  baseUnits: number | null;
+  extraUnitH: number | null;
 }
 
 interface SettingsValues {
@@ -43,6 +48,7 @@ interface SettingsValues {
   loadLowPct: number;
   loadHighPct: number;
   responseSlaH: number;
+  toolFactors: ToolFactors | null;
 }
 
 function NumberField({
@@ -93,6 +99,8 @@ export function SlaSettingsForm({
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             المدد بساعات العمل — اترك «عاجل» فارغًا ليكون «باتفاق» يُدخل عند الاعتماد.
+            أعمدة الحجم توسّع الهدف تلقائيًا: كل وحدة فوق «الحجم الأساسي» تضيف
+            «ساعات/وحدة» — اترك وحدة الحجم فارغة لتعطيل ذلك للنوع.
           </p>
         </CardHeader>
         <CardContent>
@@ -105,6 +113,9 @@ export function SlaSettingsForm({
                   <TableHead className="text-start">عادي</TableHead>
                   <TableHead className="text-start">عالي</TableHead>
                   <TableHead className="text-start">عاجل</TableHead>
+                  <TableHead className="text-start">وحدة الحجم</TableHead>
+                  <TableHead className="text-start">الحجم الأساسي</TableHead>
+                  <TableHead className="text-start">ساعات/وحدة إضافية</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,11 +170,79 @@ export function SlaSettingsForm({
                         aria-label={`هدف عاجل ${t.name}`}
                       />
                     </TableCell>
+                    <TableCell>
+                      <Input
+                        name={`type-${t.id}-unitLabel`}
+                        defaultValue={t.unitLabel ?? ""}
+                        placeholder="بلا وحدات"
+                        className="w-24"
+                        aria-label={`وحدة حجم ${t.name}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        name={`type-${t.id}-baseUnits`}
+                        type="number"
+                        min={1}
+                        defaultValue={t.baseUnits ?? ""}
+                        placeholder="—"
+                        dir="ltr"
+                        className="w-20"
+                        aria-label={`الحجم الأساسي ${t.name}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        name={`type-${t.id}-extraUnitH`}
+                        type="number"
+                        min={0.25}
+                        step={0.25}
+                        defaultValue={t.extraUnitH ?? ""}
+                        placeholder="—"
+                        dir="ltr"
+                        className="w-20"
+                        aria-label={`ساعات الوحدة الإضافية ${t.name}`}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* معاملات أدوات التنفيذ */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wrench className="size-4" />
+            معاملات أدوات التنفيذ
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            يُضرب هدف SLA في معامل الأداة المختارة في الطلب: 1 = الأساس
+            (بوربوينت)، وأقل من 1 يعني إنجازًا أسرع (مثال: إليستريتور 0.85).
+          </p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-7">
+          {DESIGN_TOOLS.map((tool) => (
+            <div key={tool} className="space-y-1.5">
+              <Label htmlFor={`tool-${tool}-factor`} className="text-xs">
+                {TOOL_META[tool].label}
+              </Label>
+              <Input
+                id={`tool-${tool}-factor`}
+                name={`tool-${tool}-factor`}
+                type="number"
+                min={0.25}
+                max={4}
+                step={0.05}
+                defaultValue={settings.toolFactors?.[tool] ?? TOOL_META[tool].defaultFactor}
+                dir="ltr"
+                className="w-24"
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
 

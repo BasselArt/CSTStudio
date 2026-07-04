@@ -1,8 +1,8 @@
 // مخطط قاعدة البيانات (SPEC §5) — بلا خصائص خاصة بـ SQLite ليسهل النقل إلى Postgres.
 // التواريخ تُخزَّن نصوصًا ISO بتوقيت UTC وتُحوَّل عند الحساب والعرض (Asia/Riyadh).
 
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import type { EventType, Priority, Role, Status } from "@/core/types";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type { DesignTool, EventType, Priority, Role, Status, ToolFactors } from "@/core/types";
 
 export const departments = sqliteTable("departments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -29,6 +29,12 @@ export const requestTypes = sqliteTable("request_types", {
   slaHighH: integer("sla_high_h").notNull(),
   /** null = «باتفاق» — تُدخل المدة يدويًا عند اعتماد العاجل (SPEC §9) */
   slaUrgentH: integer("sla_urgent_h"),
+  /** وحدة قياس الحجم للعرض (صفحة/شريحة/مادة) — null = النوع لا يُقاس بالوحدات */
+  unitLabel: text("unit_label"),
+  /** الحجم المرجعي المشمول في هدف المصفوفة */
+  baseUnits: integer("base_units"),
+  /** ساعات العمل المضافة لكل وحدة فوق الحجم المرجعي */
+  extraUnitH: real("extra_unit_h"),
   pausable: integer("pausable", { mode: "boolean" }).notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
 });
@@ -59,6 +65,10 @@ export const requests = sqliteTable("requests", {
   status: text("status").$type<Status>().notNull().default("new"),
   assigneeId: integer("assignee_id").references(() => users.id),
   sizes: text("sizes"),
+  /** حجم الطلب بوحدات النوع (صفحات/شرائح) — يدخل في معادلة هدف SLA */
+  unitCount: integer("unit_count"),
+  /** أداة التنفيذ المتوقعة — معاملها يدخل في معادلة هدف SLA */
+  tool: text("tool").$type<DesignTool>(),
   channel: text("channel"),
   publishDueDate: text("publish_due_date"),
   reviewRound: integer("review_round").notNull().default(0),
@@ -133,6 +143,8 @@ export const settings = sqliteTable("settings", {
   loadLowPct: integer("load_low_pct").notNull().default(40),
   loadHighPct: integer("load_high_pct").notNull().default(75),
   responseSlaH: integer("response_sla_h").notNull().default(4),
+  /** معاملات أدوات التنفيذ — null أو مفتاح غائب = المعامل الافتراضي في TOOL_META */
+  toolFactors: text("tool_factors", { mode: "json" }).$type<ToolFactors>(),
 });
 
 /** عدّاد الترقيم السنوي — يُحدَّث داخل transaction لمنع التسابق (SPEC §5) */
