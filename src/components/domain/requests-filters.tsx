@@ -37,9 +37,9 @@ function FilterSelect({
 }) {
   return (
     <Select value={value || ALL} onValueChange={(v) => onChange(param, v === ALL ? "" : v)}>
-      {/* سطران (تسمية + قيمة) لا يتسعان في h-8 الافتراضي — ارتفاع تلقائي مع padding مريح */}
+      {/* سطران (تسمية + قيمة) لا يتسعان في h-8 الافتراضي — h-12 موحّد لكل عناصر الشريط (مرجع design/02) */}
       <SelectTrigger
-        className="w-full bg-card py-1.5 ps-3 data-[size=default]:h-auto sm:w-44"
+        className="w-full bg-card py-1.5 ps-3 data-[size=default]:h-12 sm:w-44"
         aria-label={placeholder}
       >
         <div className="flex flex-col items-start gap-0.5">
@@ -102,7 +102,7 @@ export function RequestsFilters({
           name="q"
           defaultValue={searchParams.get("q") ?? ""}
           placeholder="ابحث برقم الطلب أو العنوان"
-          className="ps-9"
+          className="h-12 ps-9"
         />
       </form>
       <FilterSelect
@@ -140,7 +140,7 @@ export function RequestsFilters({
         onChange={setParam}
         options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_META[p].label }))}
       />
-      <Button variant="outline" onClick={reset} className="gap-2">
+      <Button variant="outline" onClick={reset} className="h-12 gap-2 px-4">
         <RotateCcw className="size-4" />
         إعادة ضبط
       </Button>
