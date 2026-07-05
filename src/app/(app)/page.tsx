@@ -13,11 +13,16 @@ import { DesignerLoadCard } from "@/components/domain/designer-load-card";
 import { EmptyState } from "@/components/domain/empty-state";
 import { KpiCard } from "@/components/domain/kpi-card";
 import { PageHeader } from "@/components/domain/page-header";
-import { PeriodSelect, PERIODS, type PeriodKey } from "@/components/domain/period-select";
+import { PeriodSelect } from "@/components/domain/period-select";
 import { SlaBadge } from "@/components/domain/badges";
 import { TOKEN_BG } from "@/components/domain/token-styles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ACTIVE_STATUSES, STATUS_META } from "@/core/constants";
+import {
+  ACTIVE_STATUSES,
+  DASHBOARD_PERIODS,
+  STATUS_META,
+  type PeriodKey,
+} from "@/core/constants";
 import {
   avgDeliveryWorkDays,
   complianceRatePct,
@@ -48,22 +53,31 @@ export default async function DashboardPage({
 }) {
   const actor = await requireActor();
   const params = await searchParams;
-  const period: PeriodKey = params.period && params.period in PERIODS ? (params.period as PeriodKey) : "month";
-
-  const [rows, settingsRow] = await Promise.all([
-    listVisibleRequests(actor),
-    getSettings(),
-  ]);
+  const period: PeriodKey =
+    params.period && params.period in DASHBOARD_PERIODS ? (params.period as PeriodKey) : "month";
 
   const now = new Date();
   const len = PERIOD_DAYS[period] * 24 * 3_600_000;
   const currFrom = new Date(now.getTime() - len);
   const prevFrom = new Date(now.getTime() - 2 * len);
 
+  const [rows, settingsRow] = await Promise.all([
+    // لقطة بداية الفترة — أساس دلتا «مقارنة بالفترة السابقة» للمؤشرات اللحظية
+    listVisibleRequests(actor, { snapshotAt: currFrom }),
+    getSettings(),
+  ]);
+
   /* --- KPIs --- */
   const active = rows.filter((r) => ACTIVE_STATUSES.includes(r.request.status));
   const overdue = rows.filter((r) => r.sla.delivery.state === "overdue");
   const dueSoon = rows.filter((r) => r.sla.delivery.state === "due_soon");
+
+  /* المؤشرات اللحظية تُقارن بلقطة بداية الفترة (SPEC §12/01) */
+  const activePrev = rows.filter(
+    (r) => r.snapshot && ACTIVE_STATUSES.includes(r.snapshot.status),
+  ).length;
+  const overduePrev = rows.filter((r) => r.snapshot?.sla.delivery.state === "overdue").length;
+  const dueSoonPrev = rows.filter((r) => r.snapshot?.sla.delivery.state === "due_soon").length;
 
   const deliveredIn = (from: Date, to: Date) =>
     rows.filter((r) => inWindow(r.request.deliveredAt, from, to));
@@ -85,8 +99,6 @@ export default async function DashboardPage({
   const avgDays = avgDeliveryWorkDays(currDelivered.map((r) => r.sla.delivery.consumedH));
   const prevAvgDays = avgDeliveryWorkDays(prevDelivered.map((r) => r.sla.delivery.consumedH));
 
-  const createdCurr = rows.filter((r) => inWindow(r.request.createdAt, currFrom, now)).length;
-  const createdPrev = rows.filter((r) => inWindow(r.request.createdAt, prevFrom, currFrom)).length;
 
   /* --- التوزيع وجدول الانتباه --- */
   const distribution = statusDistribution(
@@ -174,7 +186,7 @@ export default async function DashboardPage({
         <KpiCard
           label={KPI_DEFS.active.label}
           value={active.length}
-          delta={deltaPct(createdCurr, createdPrev)}
+          delta={deltaPct(active.length, activePrev)}
           lowerIsBetter={KPI_DEFS.active.lowerIsBetter}
           icon={ClipboardList}
           iconClassName="bg-info/10 text-info"
@@ -182,7 +194,7 @@ export default async function DashboardPage({
         <KpiCard
           label={KPI_DEFS.overdue.label}
           value={overdue.length}
-          delta={null}
+          delta={deltaPct(overdue.length, overduePrev)}
           lowerIsBetter={KPI_DEFS.overdue.lowerIsBetter}
           icon={AlarmClock}
           iconClassName="bg-danger/10 text-danger"
@@ -190,7 +202,7 @@ export default async function DashboardPage({
         <KpiCard
           label={KPI_DEFS.dueSoon24h.label}
           value={dueSoon.length}
-          delta={null}
+          delta={deltaPct(dueSoon.length, dueSoonPrev)}
           lowerIsBetter={KPI_DEFS.dueSoon24h.lowerIsBetter}
           icon={Clock4}
           iconClassName="bg-warning/10 text-warning"

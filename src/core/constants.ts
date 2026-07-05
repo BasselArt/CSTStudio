@@ -125,6 +125,19 @@ export const LOAD_STATE_META: Record<LoadState, { label: string; color: ColorTok
   high: { label: "مرتفع", color: "warning" },
 };
 
+/**
+ * فترات فلتر لوحة المتابعة (SPEC §12/01) — هنا وليس في مكوّن client:
+ * استيراد كائن من ملف "use client" داخل Server Component يعيد مرجع عميل
+ * يفشل معه فحص `in` بصمت.
+ */
+export const DASHBOARD_PERIODS = {
+  month: "هذا الشهر",
+  week: "هذا الأسبوع",
+  "90d": "آخر 90 يومًا",
+} as const;
+
+export type PeriodKey = keyof typeof DASHBOARD_PERIODS;
+
 /** عتبة «مستحق قريبًا»: المتبقي ≤ 24 ساعة عمل (SPEC §9) */
 export const DUE_SOON_THRESHOLD_H = 24;
 

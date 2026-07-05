@@ -239,12 +239,32 @@ export interface EnrichedRequest {
   requesterName: string;
   assigneeName: string | null;
   sla: SlaResult;
+  /** لقطة الحالة وSLA عند opts.snapshotAt (دلتا لوحة المتابعة) — null إذا أُنشئ الطلب بعدها */
+  snapshot?: { status: Status; sla: SlaResult } | null;
+}
+
+/** حالة الطلب وSLA كما كانا في لحظة سابقة — من أحداث status_change حتى تلك اللحظة */
+function snapshotFor(
+  request: RequestRow,
+  events: RequestEventRow[],
+  type: RequestTypeRow,
+  settingsRow: SettingsRow,
+  at: Date,
+): { status: Status; sla: SlaResult } | null {
+  if (new Date(request.createdAt) > at) return null;
+  const pastEvents = events.filter((e) => new Date(e.createdAt) <= at);
+  const lastChange = pastEvents
+    .filter((e) => e.type === "status_change")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .at(-1);
+  const status = lastChange ? (lastChange.data as { to: Status }).to : "new";
+  return { status, sla: slaFor(request, pastEvents, type, settingsRow, at) };
 }
 
 /** قائمة الطلبات المرئية للمنفّذ مع SLA محسوبًا — الفلترة والفرز على الطرف المستدعي */
 export async function listVisibleRequests(
   actor: Actor,
-  opts: { includeDrafts?: boolean } = {},
+  opts: { includeDrafts?: boolean; snapshotAt?: Date } = {},
 ): Promise<EnrichedRequest[]> {
   const [settingsRow, types, managerless] = await Promise.all([
     getSettings(),
@@ -291,6 +311,17 @@ export async function listVisibleRequests(
       settingsRow,
       now,
     ),
+    ...(opts.snapshotAt
+      ? {
+          snapshot: snapshotFor(
+            request,
+            eventsByRequest.get(request.id) ?? [],
+            typeById.get(request.typeId)!,
+            settingsRow,
+            opts.snapshotAt,
+          ),
+        }
+      : {}),
   }));
 }
 

@@ -42,7 +42,7 @@ export function KpiCard({
         </div>
         <div className="flex items-center gap-1 text-xs">
           {delta == null ? (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">لا بيانات للفترة السابقة</span>
           ) : (
             <>
               <span

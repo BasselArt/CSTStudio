@@ -10,14 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-export const PERIODS = {
-  month: "هذا الشهر",
-  week: "هذا الأسبوع",
-  "90d": "آخر 90 يومًا",
-} as const;
-
-export type PeriodKey = keyof typeof PERIODS;
+import { DASHBOARD_PERIODS, type PeriodKey } from "@/core/constants";
 
 export function PeriodSelect({ value }: { value: PeriodKey }) {
   const router = useRouter();
@@ -36,7 +29,7 @@ export function PeriodSelect({ value }: { value: PeriodKey }) {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {Object.entries(PERIODS).map(([key, label]) => (
+        {Object.entries(DASHBOARD_PERIODS).map(([key, label]) => (
           <SelectItem key={key} value={key}>
             {label}
           </SelectItem>
