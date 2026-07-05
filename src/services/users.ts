@@ -89,8 +89,12 @@ export async function setUserActive(
   await db.update(users).set({ isActive }).where(eq(users.id, id));
 }
 
-export async function listDepartments() {
-  return db.query.departments.findMany({ orderBy: asc(departments.name) });
+/** activeOnly للنماذج (طلب جديد/حساب جديد) — الفلاتر والقوائم التاريخية تعرض الكل */
+export async function listDepartments(opts: { activeOnly?: boolean } = {}) {
+  return db.query.departments.findMany({
+    where: opts.activeOnly ? eq(departments.isActive, true) : undefined,
+    orderBy: asc(departments.name),
+  });
 }
 
 export async function getStudioManagerIds(): Promise<number[]> {

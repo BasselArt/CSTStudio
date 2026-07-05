@@ -2,10 +2,11 @@
 
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { requests, requestTypes, settings } from "@/db/schema";
+import { departments, requests, requestTypes, settings } from "@/db/schema";
 import type { CalendarCfg, Role } from "@/core/types";
 import {
   brandingSchema,
+  departmentItemSchema,
   settingsSchema,
   requestTypeCreateSchema,
   requestTypeUpdateSchema,
@@ -70,6 +71,20 @@ export async function updateBranding(
     .update(settings)
     .set(logoPath === undefined ? data : { ...data, logoPath })
     .where(eq(settings.id, 1));
+}
+
+/** إنشاء أو تحديث جهة — التعطيل بدل الحذف (مُشار إليها من الطلبات والمستخدمين) */
+export async function saveDepartment(
+  input: z.infer<typeof departmentItemSchema>,
+  actorRole: Role,
+): Promise<void> {
+  assertManager(actorRole);
+  const { id, name, isActive } = departmentItemSchema.parse(input);
+  if (id != null) {
+    await db.update(departments).set({ name, isActive }).where(eq(departments.id, id));
+    return;
+  }
+  await db.insert(departments).values({ name, isActive });
 }
 
 export async function updateRequestType(

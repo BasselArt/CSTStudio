@@ -7,6 +7,8 @@ import type { EventType, Priority, Role, Status } from "@/core/types";
 export const departments = sqliteTable("departments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
+  /** التعطيل بدل الحذف — الجهة مُشار إليها من الطلبات والمستخدمين */
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 });
 
 export const users = sqliteTable("users", {
@@ -151,6 +153,8 @@ export const settings = sqliteTable("settings", {
   logoPath: text("logo_path"),
   /** قائمة قنوات الاستخدام المتاحة في نموذج الطلب — تُدار من صفحة الإعدادات */
   channels: text("channels", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** قائمة المقاسات المتاحة في نموذج الطلب — تُدار من صفحة الإعدادات */
+  sizeOptions: text("size_options", { mode: "json" }).$type<string[]>().notNull().default([]),
 });
 
 /** عدّاد الترقيم السنوي — يُحدَّث داخل transaction لمنع التسابق (SPEC §5) */

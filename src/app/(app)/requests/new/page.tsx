@@ -18,7 +18,7 @@ export default async function NewRequestPage({
   if (actor.role !== "requester" && actor.role !== "studio_manager") redirect("/requests");
 
   const [departments, types, settingsRow, sp] = await Promise.all([
-    listDepartments(),
+    listDepartments({ activeOnly: true }),
     listRequestTypes(),
     getSettings(),
     searchParams,
@@ -61,6 +61,7 @@ export default async function NewRequestPage({
         }))}
         cfg={toCalendarCfg(settingsRow)}
         channels={settingsRow.channels}
+        sizeOptions={settingsRow.sizeOptions}
         defaultDepartmentId={actor.departmentId}
         requesterName={actor.name}
         action={submitNewRequest}

@@ -15,6 +15,7 @@ import { hashSync } from "bcryptjs";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  attachments,
   departments,
   notifications,
   requestCounters,
@@ -117,6 +118,7 @@ function subWorkH(hours: number): Date {
 
 async function setup() {
   db.delete(notifications).run();
+  db.delete(attachments).run();
   db.delete(requestEvents).run();
   db.delete(requests).run();
   db.delete(requestCounters).run();

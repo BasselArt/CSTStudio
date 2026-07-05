@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PRIORITIES, PRIORITY_META, SIZE_OPTIONS } from "@/core/constants";
+import { PRIORITIES, PRIORITY_META } from "@/core/constants";
 import { addWorkingHours } from "@/core/calendar";
 import { slaTargetHours } from "@/core/sla";
 import type { CalendarCfg, Priority } from "@/core/types";
@@ -131,6 +131,7 @@ export function NewRequestForm({
   types,
   cfg,
   channels,
+  sizeOptions,
   defaultDepartmentId,
   defaultTypeId,
   related,
@@ -142,6 +143,8 @@ export function NewRequestForm({
   cfg: CalendarCfg;
   /** قنوات الاستخدام المتاحة — من settings.channels (تُدار في صفحة الإعدادات) */
   channels: string[];
+  /** المقاسات المتاحة — من settings.sizeOptions (تُدار في صفحة الإعدادات) */
+  sizeOptions: string[];
   defaultDepartmentId: number | null;
   defaultTypeId?: number | null;
   /** طلب أصلي يرتبط به هذا الطلب كـ«طلب تعديل» (SPEC §6) */
@@ -430,7 +433,7 @@ export function NewRequestForm({
               </span>
             </Label>
             <div className="flex flex-wrap gap-2">
-              {SIZE_OPTIONS.map((s) => (
+              {sizeOptions.map((s) => (
                 <ToggleChip
                   key={s}
                   active={selectedSizes.includes(s)}

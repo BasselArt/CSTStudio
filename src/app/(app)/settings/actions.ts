@@ -8,12 +8,14 @@ import { FileValidationError, saveBrandingLogo } from "@/services/files";
 import {
   createRequestType,
   deleteRequestType,
+  saveDepartment,
   updateBranding,
   updateRequestType,
   updateSettings,
 } from "@/services/settings";
 import {
   brandingSchema,
+  departmentItemSchema,
   requestTypeCreateSchema,
   requestTypeUpdateSchema,
   settingsSchema,
@@ -91,6 +93,7 @@ export async function saveBrandingSettings(
     orgName: formData.get("orgName"),
     orgSubtitle: formData.get("orgSubtitle") ?? "",
     channels: formData.getAll("channels").filter((c) => typeof c === "string" && c),
+    sizeOptions: formData.getAll("sizeOptions").filter((s) => typeof s === "string" && s),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -117,6 +120,45 @@ export async function saveBrandingSettings(
   }
 
   revalidatePath("/", "layout"); // الهوية تظهر في السايدبار عبر كل الصفحات
+  return { success: true };
+}
+
+/** حفظ قائمة الجهات: تعديل الأسماء وتفعيل/تعطيل وإضافة جهات جديدة (للمسؤول فقط) */
+export async function saveDepartments(
+  _prev: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const actor = await requireActor();
+
+  const inputs = [
+    ...formData.getAll("itemId").map((raw) => ({
+      id: Number(raw),
+      name: formData.get(`item-${raw}-name`),
+      isActive: formData.get(`item-${raw}-active`),
+    })),
+    ...formData
+      .getAll("newName")
+      .filter((n) => typeof n === "string" && n.trim() !== "")
+      .map((name) => ({ id: undefined, name, isActive: "on" })),
+  ];
+
+  const items = [];
+  for (const input of inputs) {
+    const parsed = departmentItemSchema.safeParse(input);
+    if (!parsed.success) return { error: parsed.error.issues[0].message };
+    items.push(parsed.data);
+  }
+
+  try {
+    for (const item of items) await saveDepartment(item, actor.role);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "تعذر الحفظ." };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/requests/new");
+  revalidatePath("/requests");
+  revalidatePath("/users");
   return { success: true };
 }
 

@@ -125,18 +125,6 @@ export const LOAD_STATE_META: Record<LoadState, { label: string; color: ColorTok
   high: { label: "مرتفع", color: "warning" },
 };
 
-/** خيارات المقاسات الشائعة في نموذج الطلب — «أخرى» تفتح إدخالًا نصيًا حرًا */
-export const SIZE_OPTIONS = [
-  "1080x1080 (مربع)",
-  "1080x1920 (ستوري)",
-  "1920x1080 (شاشة)",
-  "A4",
-  "A5",
-  "بانر ويب 1920x600",
-  "بطاقة عمل 85x55mm",
-  "SVG / PNG شفاف",
-] as const;
-
 /** عتبة «مستحق قريبًا»: المتبقي ≤ 24 ساعة عمل (SPEC §9) */
 export const DUE_SOON_THRESHOLD_H = 24;
 

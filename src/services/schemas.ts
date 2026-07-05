@@ -140,13 +140,23 @@ export const settingsSchema = z.object({
   message: "نهاية الدوام يجب أن تلي بدايته.",
 });
 
-/** هوية النظام (صفحة الإعدادات): الاسم والوصف وقائمة قنوات الاستخدام */
+/** هوية النظام (صفحة الإعدادات): الاسم والوصف وقائمتا القنوات والمقاسات */
 export const brandingSchema = z.object({
   orgName: z.string().trim().min(2, "أدخل اسم الاستوديو.").max(100, "الاسم يتجاوز 100 حرف."),
   orgSubtitle: z.string().trim().max(150, "الوصف يتجاوز 150 حرفًا."),
   channels: z
     .array(z.string().trim().min(2, "اسم القناة قصير.").max(100))
     .min(1, "أضف قناة استخدام واحدة على الأقل."),
+  sizeOptions: z
+    .array(z.string().trim().min(1, "المقاس فارغ.").max(60, "المقاس يتجاوز 60 حرفًا."))
+    .min(1, "أضف مقاسًا واحدًا على الأقل."),
+});
+
+/** جهة (قائمة مرجعية) — بلا id = إنشاء جديد، والتعطيل بدل الحذف */
+export const departmentItemSchema = z.object({
+  id: z.coerce.number().int().positive().optional(),
+  name: z.string().trim().min(2, "أدخل اسم الجهة (حرفان على الأقل).").max(100, "الاسم يتجاوز 100 حرف."),
+  isActive: z.coerce.boolean(),
 });
 
 const userFields = {

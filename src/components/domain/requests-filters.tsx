@@ -3,9 +3,9 @@
 // شريط فلاتر إدارة الطلبات — كل قيمة تُكتب في searchParams (روابط قابلة للمشاركة).
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { RotateCcw, Search } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LiveSearch } from "@/components/domain/live-search";
 import {
   Select,
   SelectContent,
@@ -88,23 +88,11 @@ export function RequestsFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
-      <form
-        className="relative min-w-52 flex-1"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const input = e.currentTarget.querySelector("input");
-          setParam("q", input?.value ?? "");
-        }}
-      >
-        <Search className="absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          name="q"
-          defaultValue={searchParams.get("q") ?? ""}
-          placeholder="ابحث برقم الطلب أو العنوان"
-          className="h-12 ps-9"
-        />
-      </form>
+      <LiveSearch
+        placeholder="ابحث برقم الطلب أو العنوان"
+        className="min-w-52 flex-1"
+        inputClassName="h-12"
+      />
       <FilterSelect
         param="status"
         placeholder="الحالة"

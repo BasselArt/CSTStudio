@@ -15,6 +15,79 @@ interface BrandingValues {
   orgSubtitle: string;
   hasLogo: boolean;
   channels: string[];
+  sizeOptions: string[];
+}
+
+/** قائمة وسوم قابلة للتحرير (قنوات/مقاسات) — تُرسل كحقول مخفية متعددة القيم */
+function TagListField({
+  label,
+  name,
+  placeholder,
+  items,
+  onChange,
+  ltr,
+}: {
+  label: string;
+  name: string;
+  placeholder: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+  /** للمقاسات الرقمية — تُعرض باتجاه LTR */
+  ltr?: boolean;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function add() {
+    const value = draft.trim();
+    if (value && !items.includes(value)) {
+      onChange([...items, value]);
+      setDraft("");
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        {items.map((item) => (
+          <span
+            key={item}
+            className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-xs"
+          >
+            <input type="hidden" name={name} value={item} />
+            <span dir={ltr ? "ltr" : undefined}>{item}</span>
+            <button
+              type="button"
+              onClick={() => onChange(items.filter((x) => x !== item))}
+              aria-label={`حذف ${item}`}
+              className="text-muted-foreground hover:text-danger"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder={placeholder}
+          className="w-56"
+          aria-label={placeholder}
+        />
+        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={add}>
+          <Plus className="size-3.5" />
+          إضافة
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function BrandingSettingsForm({
@@ -26,19 +99,11 @@ export function BrandingSettingsForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const [channels, setChannels] = useState<string[]>(branding.channels);
-  const [newChannel, setNewChannel] = useState("");
+  const [sizeOptions, setSizeOptions] = useState<string[]>(branding.sizeOptions);
   const [logoPreview, setLogoPreview] = useState<string | null>(
     branding.hasLogo ? "/api/branding/logo" : null,
   );
   const [removeLogo, setRemoveLogo] = useState(false);
-
-  function addChannel() {
-    const value = newChannel.trim();
-    if (value && !channels.includes(value)) {
-      setChannels([...channels, value]);
-      setNewChannel("");
-    }
-  }
 
   return (
     <form action={formAction}>
@@ -120,48 +185,22 @@ export function BrandingSettingsForm({
             </div>
           </div>
 
-          {/* قنوات الاستخدام */}
-          <div className="space-y-2">
-            <Label>قنوات الاستخدام في نموذج الطلب</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {channels.map((c) => (
-                <span
-                  key={c}
-                  className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-xs"
-                >
-                  <input type="hidden" name="channels" value={c} />
-                  {c}
-                  <button
-                    type="button"
-                    onClick={() => setChannels(channels.filter((x) => x !== c))}
-                    aria-label={`حذف قناة ${c}`}
-                    className="text-muted-foreground hover:text-danger"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                value={newChannel}
-                onChange={(e) => setNewChannel(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addChannel();
-                  }
-                }}
-                placeholder="قناة جديدة…"
-                className="w-56"
-                aria-label="قناة استخدام جديدة"
-              />
-              <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addChannel}>
-                <Plus className="size-3.5" />
-                إضافة
-              </Button>
-            </div>
-          </div>
+          {/* القوائم المرجعية لنموذج الطلب */}
+          <TagListField
+            label="قنوات الاستخدام في نموذج الطلب"
+            name="channels"
+            placeholder="قناة جديدة…"
+            items={channels}
+            onChange={setChannels}
+          />
+          <TagListField
+            label="المقاسات المتاحة في نموذج الطلب"
+            name="sizeOptions"
+            placeholder="مقاس جديد…"
+            items={sizeOptions}
+            onChange={setSizeOptions}
+            ltr
+          />
 
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={pending} className="gap-2">
