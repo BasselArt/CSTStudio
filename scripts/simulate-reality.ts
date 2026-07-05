@@ -276,8 +276,8 @@ async function main() {
     description: "وصف تفصيلي واقعي يتجاوز الحد الأدنى للتحقق.",
     language: "ar",
     publishDueDate: "2026-12-31",
-    sizes: "1080x1080",
-    channel: "منصات التواصل الاجتماعي",
+    sizes: ["1080x1080"],
+    channels: ["منصات التواصل الاجتماعي"],
     priority: "normal",
     ...extra,
   }) as Parameters<typeof createRequest>[0];

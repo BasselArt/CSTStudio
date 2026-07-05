@@ -1,17 +1,23 @@
 "use server";
 
-// حفظ إعدادات SLA (للمسؤول فقط) — SPEC §12/05.
+// حفظ إعدادات SLA وهوية النظام (للمسؤول فقط) — SPEC §12/05.
 
 import { revalidatePath } from "next/cache";
-import { DESIGN_TOOLS } from "@/core/constants";
 import { requireActor } from "@/lib/auth";
+import { FileValidationError, saveBrandingLogo } from "@/services/files";
 import {
   createRequestType,
   deleteRequestType,
+  updateBranding,
   updateRequestType,
   updateSettings,
 } from "@/services/settings";
-import { requestTypeCreateSchema, requestTypeUpdateSchema, settingsSchema } from "@/services/schemas";
+import {
+  brandingSchema,
+  requestTypeCreateSchema,
+  requestTypeUpdateSchema,
+  settingsSchema,
+} from "@/services/schemas";
 
 export interface SettingsState {
   error?: string;
@@ -35,9 +41,6 @@ export async function saveSlaSettings(
     loadLowPct: formData.get("loadLowPct"),
     loadHighPct: formData.get("loadHighPct"),
     responseSlaH: formData.get("responseSlaH"),
-    toolFactors: Object.fromEntries(
-      DESIGN_TOOLS.map((tool) => [tool, formData.get(`tool-${tool}-factor`)]),
-    ),
   };
 
   const parsedSettings = settingsSchema.safeParse(settingsInput);
@@ -72,8 +75,48 @@ export async function saveSlaSettings(
     return { error: error instanceof Error ? error.message : "تعذر الحفظ." };
   }
 
-  revalidatePath("/settings");
+  revalidatePath("/settings/sla");
   revalidatePath("/");
+  return { success: true };
+}
+
+/** حفظ هوية النظام: الاسم والوصف والشعار وقنوات الاستخدام (للمسؤول فقط) */
+export async function saveBrandingSettings(
+  _prev: SettingsState,
+  formData: FormData,
+): Promise<SettingsState> {
+  const actor = await requireActor();
+
+  const parsed = brandingSchema.safeParse({
+    orgName: formData.get("orgName"),
+    orgSubtitle: formData.get("orgSubtitle") ?? "",
+    channels: formData.getAll("channels").filter((c) => typeof c === "string" && c),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  /* الشعار اختياري — undefined يعني إبقاء الحالي، وremoveLogo تعيده للنصي */
+  let logoPath: string | null | undefined;
+  const logo = formData.get("logo");
+  if (formData.get("removeLogo") === "1") {
+    logoPath = null;
+  } else if (logo instanceof File && logo.size > 0) {
+    try {
+      logoPath = await saveBrandingLogo(logo);
+    } catch (error) {
+      if (error instanceof FileValidationError) return { error: error.message };
+      throw error;
+    }
+  }
+
+  try {
+    await updateBranding(parsed.data, actor.role, logoPath);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "تعذر الحفظ." };
+  }
+
+  revalidatePath("/", "layout"); // الهوية تظهر في السايدبار عبر كل الصفحات
   return { success: true };
 }
 
@@ -103,7 +146,7 @@ export async function addRequestType(
     return { error: error instanceof Error ? error.message : "تعذر إنشاء النوع." };
   }
 
-  revalidatePath("/settings");
+  revalidatePath("/settings/sla");
   revalidatePath("/requests/new");
   return { success: true };
 }
@@ -123,7 +166,7 @@ export async function removeRequestType(
     return { error: error instanceof Error ? error.message : "تعذر حذف النوع." };
   }
 
-  revalidatePath("/settings");
+  revalidatePath("/settings/sla");
   revalidatePath("/requests/new");
   return { success: true };
 }

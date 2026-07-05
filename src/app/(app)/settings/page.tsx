@@ -1,55 +1,29 @@
-// إعدادات SLA (SPEC §12/05) — المصفوفة + تقويم العمل + قواعد التشغيل، للمسؤول فقط.
+// الإعدادات العامة (للمسؤول فقط): هوية النظام — الاسم والشعار وقنوات الاستخدام.
 
 import { redirect } from "next/navigation";
+import { BrandingSettingsForm } from "@/components/domain/branding-settings-form";
 import { PageHeader } from "@/components/domain/page-header";
-import { SlaSettingsForm } from "@/components/domain/sla-settings-form";
 import { requireActor } from "@/lib/auth";
-import { countRequestsByType, getSettings, listRequestTypes } from "@/services/settings";
-import { addRequestType, removeRequestType, saveSlaSettings } from "./actions";
+import { getSettings } from "@/services/settings";
+import { saveBrandingSettings } from "./actions";
 
 export default async function SettingsPage() {
   const actor = await requireActor();
   if (actor.role !== "studio_manager") redirect("/");
 
-  const [settingsRow, types, usage] = await Promise.all([
-    getSettings(),
-    listRequestTypes(),
-    countRequestsByType(),
-  ]);
+  const settingsRow = await getSettings();
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="إعدادات SLA" />
-      <SlaSettingsForm
-        types={types.map((t) => ({
-          id: t.id,
-          name: t.name,
-          description: t.description,
-          requestCount: usage[t.id] ?? 0,
-          effortPoints: t.effortPoints,
-          slaNormalH: t.slaNormalH,
-          slaHighH: t.slaHighH,
-          slaUrgentH: t.slaUrgentH,
-          unitLabel: t.unitLabel,
-          baseUnits: t.baseUnits,
-          extraUnitH: t.extraUnitH,
-        }))}
-        settings={{
-          workDays: settingsRow.workDays,
-          workStart: settingsRow.workStart,
-          workEnd: settingsRow.workEnd,
-          holidays: settingsRow.holidays,
-          alertThresholdPct: settingsRow.alertThresholdPct,
-          autoCloseWorkDays: settingsRow.autoCloseWorkDays,
-          maxReviewRounds: settingsRow.maxReviewRounds,
-          loadLowPct: settingsRow.loadLowPct,
-          loadHighPct: settingsRow.loadHighPct,
-          responseSlaH: settingsRow.responseSlaH,
-          toolFactors: settingsRow.toolFactors,
+      <PageHeader title="الإعدادات" />
+      <BrandingSettingsForm
+        branding={{
+          orgName: settingsRow.orgName,
+          orgSubtitle: settingsRow.orgSubtitle,
+          hasLogo: !!settingsRow.logoPath,
+          channels: settingsRow.channels,
         }}
-        action={saveSlaSettings}
-        addAction={addRequestType}
-        deleteAction={removeRequestType}
+        action={saveBrandingSettings}
       />
     </div>
   );

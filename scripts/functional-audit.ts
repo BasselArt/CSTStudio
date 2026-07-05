@@ -25,7 +25,6 @@ import {
   users,
 } from "@/db/schema";
 import { workingHoursBetween } from "@/core/calendar";
-import { DESIGN_TOOLS, TOOL_META } from "@/core/constants";
 import type { CalendarCfg, Status } from "@/core/types";
 import {
   addAttachment,
@@ -203,8 +202,8 @@ function validInput(f: Fixtures, overrides: Record<string, unknown> = {}) {
     description: "وصف تفصيلي كافٍ لاجتياز التحقق من عشرة أحرف.",
     language: "ar",
     publishDueDate: "2026-08-01",
-    sizes: "1080x1080",
-    channel: "منصات التواصل الاجتماعي",
+    sizes: ["1080x1080"],
+    channels: ["منصات التواصل الاجتماعي"],
     priority: "normal",
     ...overrides,
   } as Parameters<typeof createRequest>[0];
@@ -298,9 +297,6 @@ async function main() {
       workDays: [0, 1, 2, 3, 4], workStart: "08:00", workEnd: "16:00", holidays: [],
       alertThresholdPct: 75, autoCloseWorkDays: 3, maxReviewRounds: 2,
       loadLowPct: 40, loadHighPct: 75, responseSlaH: 4,
-      toolFactors: Object.fromEntries(
-        DESIGN_TOOLS.map((t) => [t, TOOL_META[t].defaultFactor]),
-      ) as Record<(typeof DESIGN_TOOLS)[number], number>,
     };
     await expectThrows(() => updateSettings(s, "designer"), "ForbiddenError");
     await expectThrows(() => updateSettings(s, "requester"), "ForbiddenError");

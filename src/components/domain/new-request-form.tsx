@@ -30,10 +30,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DESIGN_TOOLS, PRIORITIES, PRIORITY_META, TOOL_META } from "@/core/constants";
+import { PRIORITIES, PRIORITY_META, SIZE_OPTIONS } from "@/core/constants";
 import { addWorkingHours } from "@/core/calendar";
-import { slaTargetHours, toolFactorFor } from "@/core/sla";
-import type { CalendarCfg, DesignTool, Priority, ToolFactors } from "@/core/types";
+import { slaTargetHours } from "@/core/sla";
+import type { CalendarCfg, Priority } from "@/core/types";
 import { formatDate, formatWorkingDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { NewRequestState } from "@/app/(app)/requests/new/actions";
@@ -58,15 +58,31 @@ interface Option {
 
 const TYPE_ICONS = [PencilLine, FileImage, LayoutTemplate, Grid2x2];
 
-const CHANNELS = [
-  "منصات التواصل الاجتماعي",
-  "الموقع الإلكتروني",
-  "مطبوعات",
-  "شاشات داخلية",
-  "عروض تقديمية",
-  "فعاليات",
-  "البريد الداخلي",
-];
+/** زر اختيار متعدد (chip) — للمقاسات وقنوات الاستخدام */
+function ToggleChip({
+  active,
+  onToggle,
+  children,
+}: {
+  active: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onToggle}
+      className={cn(
+        "rounded-lg border px-3 py-1.5 text-sm transition-colors",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        active ? "border-navy bg-navy text-white" : "text-muted-foreground hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -114,7 +130,7 @@ export function NewRequestForm({
   departments,
   types,
   cfg,
-  toolFactors,
+  channels,
   defaultDepartmentId,
   defaultTypeId,
   related,
@@ -124,8 +140,8 @@ export function NewRequestForm({
   departments: Option[];
   types: TypeOption[];
   cfg: CalendarCfg;
-  /** معاملات الأدوات من الإعدادات — للملخص الحي */
-  toolFactors: ToolFactors | null;
+  /** قنوات الاستخدام المتاحة — من settings.channels (تُدار في صفحة الإعدادات) */
+  channels: string[];
   defaultDepartmentId: number | null;
   defaultTypeId?: number | null;
   /** طلب أصلي يرتبط به هذا الطلب كـ«طلب تعديل» (SPEC §6) */
@@ -139,7 +155,10 @@ export function NewRequestForm({
   const [typeId, setTypeId] = useState<number | null>(defaultTypeId ?? null);
   const [priority, setPriority] = useState<Priority>("normal");
   const [unitCount, setUnitCount] = useState("");
-  const [tool, setTool] = useState<DesignTool | "">("");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [otherSizeOn, setOtherSizeOn] = useState(false);
+  const [otherSize, setOtherSize] = useState("");
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [publishDueDate, setPublishDueDate] = useState("");
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
@@ -148,13 +167,12 @@ export function NewRequestForm({
 
   const selectedType = types.find((t) => t.id === typeId) ?? null;
 
-  /* الملخص الحي عبر دوال core (SPEC §12/03) — يراعي الحجم وأداة التنفيذ */
+  /* الملخص الحي عبر دوال core (SPEC §12/03) — يراعي حجم الطلب */
   const summary = useMemo(() => {
     if (!selectedType) return null;
     // «عاجل» قبل الاعتماد يُحسب على مدة «عالي» (SPEC §9)
     const targetH = slaTargetHours(selectedType, priority, false, {
       unitCount: unitCount ? Number(unitCount) : null,
-      toolFactor: toolFactorFor(tool || null, toolFactors),
     });
     if (targetH == null) return { targetH: null, expected: null, dueWarning: false };
     const expected = addWorkingHours(new Date(), targetH, cfg);
@@ -162,7 +180,7 @@ export function NewRequestForm({
       ? new Date(`${publishDueDate}T23:59:59+03:00`).getTime() < expected.getTime()
       : false;
     return { targetH, expected, dueWarning };
-  }, [selectedType, priority, unitCount, tool, toolFactors, publishDueDate, cfg]);
+  }, [selectedType, priority, unitCount, publishDueDate, cfg]);
 
   return (
     <form action={formAction} className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
@@ -346,7 +364,7 @@ export function NewRequestForm({
 
         {/* القسم الثالث — متطلبات التسليم */}
         <SectionCard number={3} title="القسم الثالث — متطلبات التسليم">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="publishDueDate">
                 تاريخ النشر المطلوب <span className="text-danger">*</span>
@@ -360,32 +378,6 @@ export function NewRequestForm({
                 aria-invalid={!!errors.publishDueDate}
               />
               <FieldError message={errors.publishDueDate} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sizes">
-                المقاسات المطلوبة <span className="text-danger">*</span>
-              </Label>
-              <Input id="sizes" name="sizes" placeholder="مثال: 1080x1080، A4، 1920x1080" />
-              <p className="text-[10px] text-muted-foreground">افصل المقاسات بفاصلة</p>
-              <FieldError message={errors.sizes} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="channel">
-                قناة الاستخدام <span className="text-danger">*</span>
-              </Label>
-              <Select name="channel">
-                <SelectTrigger id="channel" className="w-full">
-                  <SelectValue placeholder="اختر قناة الاستخدام" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHANNELS.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError message={errors.channel} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="priority">
@@ -405,9 +397,6 @@ export function NewRequestForm({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {selectedType?.unitLabel ? (
               <div className="space-y-2">
                 <Label htmlFor="unitCount">حجم الطلب (عدد {selectedType.unitLabel})</Label>
@@ -431,26 +420,77 @@ export function NewRequestForm({
                 <FieldError message={errors.unitCount} />
               </div>
             ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="tool">أداة التنفيذ المتوقعة</Label>
-              <input type="hidden" name="tool" value={tool} />
-              <Select
-                value={tool || undefined}
-                onValueChange={(v) => setTool(v as DesignTool)}
-              >
-                <SelectTrigger id="tool" className="w-full">
-                  <SelectValue placeholder="اختياري — تؤثر في مدة التنفيذ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DESIGN_TOOLS.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {TOOL_META[t].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError message={errors.tool} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              المقاسات المطلوبة <span className="text-danger">*</span>
+              <span className="ms-2 text-[10px] font-normal text-muted-foreground">
+                يمكن اختيار أكثر من مقاس
+              </span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {SIZE_OPTIONS.map((s) => (
+                <ToggleChip
+                  key={s}
+                  active={selectedSizes.includes(s)}
+                  onToggle={() =>
+                    setSelectedSizes((prev) =>
+                      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+                    )
+                  }
+                >
+                  <span dir="ltr">{s}</span>
+                </ToggleChip>
+              ))}
+              <ToggleChip active={otherSizeOn} onToggle={() => setOtherSizeOn((v) => !v)}>
+                أخرى…
+              </ToggleChip>
             </div>
+            {otherSizeOn ? (
+              <Input
+                value={otherSize}
+                onChange={(e) => setOtherSize(e.target.value)}
+                placeholder="اكتب المقاس المطلوب — مثال: 2000x800"
+                className="max-w-72"
+                aria-label="مقاس آخر"
+              />
+            ) : null}
+            {selectedSizes.map((s) => (
+              <input key={s} type="hidden" name="sizes" value={s} />
+            ))}
+            {otherSizeOn && otherSize.trim() ? (
+              <input type="hidden" name="sizes" value={otherSize.trim()} />
+            ) : null}
+            <FieldError message={errors.sizes} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              قنوات الاستخدام <span className="text-danger">*</span>
+              <span className="ms-2 text-[10px] font-normal text-muted-foreground">
+                يمكن اختيار أكثر من قناة
+              </span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {channels.map((c) => (
+                <ToggleChip
+                  key={c}
+                  active={selectedChannels.includes(c)}
+                  onToggle={() =>
+                    setSelectedChannels((prev) =>
+                      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+                    )
+                  }
+                >
+                  {c}
+                </ToggleChip>
+              ))}
+            </div>
+            {selectedChannels.map((c) => (
+              <input key={c} type="hidden" name="channels" value={c} />
+            ))}
+            <FieldError message={errors.channels} />
           </div>
 
           {priority === "urgent" ? (

@@ -57,6 +57,39 @@ export async function saveUpload(file: File): Promise<AttachmentInput> {
   return { filename: safeName, path: relPath, size: file.size, mime };
 }
 
+/** أنواع الشعار المسموحة وحده الأقصى */
+const LOGO_EXTENSIONS: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+};
+export const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+
+export function logoMime(relPath: string): string {
+  return LOGO_EXTENSIONS[path.extname(relPath).toLowerCase()] ?? "image/png";
+}
+
+/** حفظ شعار النظام في storage/uploads/branding ويعيد المسار النسبي */
+export async function saveBrandingLogo(file: File): Promise<string> {
+  const ext = path.extname(file.name).toLowerCase();
+  if (!LOGO_EXTENSIONS[ext]) {
+    throw new FileValidationError("نوع الشعار غير مسموح — الأنواع المسموحة: PNG, JPG, WEBP.");
+  }
+  if (file.size > MAX_LOGO_SIZE) {
+    throw new FileValidationError("حجم الشعار يتجاوز الحد الأقصى 2MB.");
+  }
+  if (file.size === 0) {
+    throw new FileValidationError("ملف الشعار فارغ.");
+  }
+
+  const relPath = path.join("branding", `logo-${crypto.randomUUID()}${ext}`);
+  const absPath = path.join(uploadsRoot(), relPath);
+  fs.mkdirSync(path.dirname(absPath), { recursive: true });
+  fs.writeFileSync(absPath, Buffer.from(await file.arrayBuffer()));
+  return relPath;
+}
+
 /** قراءة ملف مرفق للتنزيل — يرفض أي مسار يخرج عن مجلد الرفع */
 export function readAttachmentFile(relPath: string): Buffer {
   const abs = path.resolve(uploadsRoot(), relPath);

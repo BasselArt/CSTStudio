@@ -19,8 +19,7 @@ import {
   users,
 } from "./schema";
 import { addWorkingHours, workingHoursBetween } from "@/core/calendar";
-import { DESIGN_TOOLS, TOOL_META } from "@/core/constants";
-import type { CalendarCfg, DesignTool, Priority, Status } from "@/core/types";
+import type { CalendarCfg, Priority, Status } from "@/core/types";
 
 const DEV_PASSWORD = "Cst@2026"; // موثقة في README — للتطوير فقط
 
@@ -86,7 +85,6 @@ interface SeedRequest {
   /** حجم الطلب بوحدات النوع — يوسّع هدف SLA */
   unitCount?: number;
   /** أداة التنفيذ — معاملها يدخل في هدف SLA */
-  tool?: DesignTool;
   channel?: string;
   publishDueWorkH?: number;
   urgentJustification?: string;
@@ -142,9 +140,18 @@ async function main() {
       loadLowPct: 40,
       loadHighPct: 75,
       responseSlaH: 4,
-      toolFactors: Object.fromEntries(
-        DESIGN_TOOLS.map((t) => [t, TOOL_META[t].defaultFactor]),
-      ),
+      orgName: "استوديو التصميم",
+      orgSubtitle: "هيئة الاتصالات والفضاء والتقنية",
+      logoPath: null,
+      channels: [
+        "منصات التواصل الاجتماعي",
+        "الموقع الإلكتروني",
+        "مطبوعات",
+        "شاشات داخلية",
+        "عروض تقديمية",
+        "فعاليات",
+        "البريد الداخلي",
+      ],
     })
     .run();
 
@@ -244,7 +251,7 @@ async function main() {
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
       typeName: "تصميم متوسط", priority: "urgent", ageH: 2, steps: [],
       urgentJustification: "توجيه من معالي المحافظ بعقد مؤتمر صحفي خلال 48 ساعة.",
-      sizes: "3000x2000، A5", unitCount: 12, tool: "illustrator",
+      sizes: "3000x2000، A5", unitCount: 12,
       channel: "فعاليات", publishDueWorkH: 16,
     }),
     // --- تحتاج استكمال
@@ -338,7 +345,7 @@ async function main() {
         { to: "in_progress", afterH: 2 },
       ],
       // 8 صفحات بإن ديزاين: (24 + 3×1.5) × 0.9 = 26 ساعة — تبقى «مستحقة قريبًا»
-      sizes: "A4", unitCount: 8, tool: "indesign",
+      sizes: "A4", unitCount: 8,
       channel: "مطبوعات وPDF", publishDueWorkH: 26,
     }),
     R({
@@ -352,7 +359,7 @@ async function main() {
         { to: "in_progress", afterH: 2 },
       ],
       // عرض 30 شريحة: الهدف يتمدد من 16 إلى (16 + 25×1.5) × 1 = 54 ساعة
-      sizes: "1920x1080", unitCount: 30, tool: "powerpoint",
+      sizes: "1920x1080", unitCount: 30,
       channel: "عروض تقديمية", publishDueWorkH: 18,
     }),
     R({
@@ -391,7 +398,7 @@ async function main() {
       ],
       urgentJustification: "العرض أمام اللجنة التنفيذية صباح الغد.",
       urgentApprovedAfterH: 0.75,
-      sizes: "1920x1080", unitCount: 1, tool: "powerpoint",
+      sizes: "1920x1080", unitCount: 1,
       channel: "عروض تقديمية", publishDueWorkH: 8,
     }),
     R({
@@ -620,7 +627,7 @@ async function main() {
         { to: "closed", afterH: 60 },
       ],
       // تقرير 20 صفحة بإن ديزاين: (24 + 15×1.5) × 0.9 = 42 ساعة
-      sizes: "A4", unitCount: 20, tool: "indesign",
+      sizes: "A4", unitCount: 20,
       channel: "مطبوعات وPDF", publishDueWorkH: 48,
     }),
     R({
@@ -727,8 +734,7 @@ async function main() {
         assigneeId: designer?.id ?? null,
         sizes: spec.sizes,
         unitCount: spec.unitCount,
-        tool: spec.tool,
-        channel: spec.channel,
+        channels: spec.channel ? [spec.channel] : null,
         publishDueDate: spec.publishDueWorkH
           ? iso(addWorkingHours(createdAt, spec.publishDueWorkH, cfg)).slice(0, 10)
           : null,

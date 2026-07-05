@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getSettings } from "@/services/settings";
 
 async function login(formData: FormData) {
   "use server";
@@ -29,16 +30,27 @@ export default async function LoginPage({
 }) {
   const session = await auth();
   if (session?.user) redirect("/");
-  const { error } = await searchParams;
+  const [{ error }, settingsRow] = await Promise.all([searchParams, getSettings()]);
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-navy">استوديو التصميم</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            هيئة الاتصالات والفضاء والتقنية
-          </p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          {settingsRow.logoPath ? (
+            <span className="mb-4 grid size-16 place-items-center overflow-hidden rounded-2xl bg-navy shadow-sm">
+              {/* شعار من الإعدادات — img عادي (خارج تحسين next/image عمدًا) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/api/branding/logo"
+                alt={settingsRow.orgName}
+                className="size-full object-contain p-1.5"
+              />
+            </span>
+          ) : null}
+          <h1 className="text-2xl font-bold text-navy">{settingsRow.orgName}</h1>
+          {settingsRow.orgSubtitle ? (
+            <p className="mt-1 text-sm text-muted-foreground">{settingsRow.orgSubtitle}</p>
+          ) : null}
         </div>
         <Card>
           <CardHeader>

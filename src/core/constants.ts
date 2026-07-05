@@ -3,7 +3,6 @@
 
 import type {
   ColorToken,
-  DesignTool,
   EventType,
   LoadState,
   Priority,
@@ -126,31 +125,17 @@ export const LOAD_STATE_META: Record<LoadState, { label: string; color: ColorTok
   high: { label: "مرتفع", color: "warning" },
 };
 
-/** الترتيب الرسمي لأدوات التنفيذ (يحكم القوائم ونموذج الإعدادات) */
-export const DESIGN_TOOLS = [
-  "powerpoint",
-  "illustrator",
-  "photoshop",
-  "indesign",
-  "figma",
-  "canva",
-  "other",
-] as const satisfies readonly DesignTool[];
-
-/**
- * أداة التنفيذ: التسمية + المعامل الافتراضي لهدف SLA.
- * المعامل يضرب الهدف: 1 = الأساس (بوربوينت)، أقل من 1 = إنجاز أسرع.
- * القيم الفعلية قابلة للتعديل من إعدادات SLA (settings.toolFactors).
- */
-export const TOOL_META: Record<DesignTool, { label: string; defaultFactor: number }> = {
-  powerpoint: { label: "بوربوينت", defaultFactor: 1 },
-  illustrator: { label: "إليستريتور", defaultFactor: 0.85 },
-  photoshop: { label: "فوتوشوب", defaultFactor: 0.9 },
-  indesign: { label: "إن ديزاين", defaultFactor: 0.9 },
-  figma: { label: "فيقما", defaultFactor: 0.85 },
-  canva: { label: "كانفا", defaultFactor: 0.7 },
-  other: { label: "أخرى", defaultFactor: 1 },
-};
+/** خيارات المقاسات الشائعة في نموذج الطلب — «أخرى» تفتح إدخالًا نصيًا حرًا */
+export const SIZE_OPTIONS = [
+  "1080x1080 (مربع)",
+  "1080x1920 (ستوري)",
+  "1920x1080 (شاشة)",
+  "A4",
+  "A5",
+  "بانر ويب 1920x600",
+  "بطاقة عمل 85x55mm",
+  "SVG / PNG شفاف",
+] as const;
 
 /** عتبة «مستحق قريبًا»: المتبقي ≤ 24 ساعة عمل (SPEC §9) */
 export const DUE_SOON_THRESHOLD_H = 24;

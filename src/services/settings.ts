@@ -4,7 +4,12 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { requests, requestTypes, settings } from "@/db/schema";
 import type { CalendarCfg, Role } from "@/core/types";
-import { settingsSchema, requestTypeCreateSchema, requestTypeUpdateSchema } from "./schemas";
+import {
+  brandingSchema,
+  settingsSchema,
+  requestTypeCreateSchema,
+  requestTypeUpdateSchema,
+} from "./schemas";
 import type { z } from "zod";
 
 export type SettingsRow = typeof settings.$inferSelect;
@@ -51,6 +56,20 @@ export async function updateSettings(
   assertManager(actorRole);
   const data = settingsSchema.parse(input);
   await db.update(settings).set(data).where(eq(settings.id, 1));
+}
+
+/** حفظ هوية النظام — logoPath يُمرَّر فقط عند تغيير الشعار (undefined = بلا تغيير) */
+export async function updateBranding(
+  input: z.infer<typeof brandingSchema>,
+  actorRole: Role,
+  logoPath?: string | null,
+): Promise<void> {
+  assertManager(actorRole);
+  const data = brandingSchema.parse(input);
+  await db
+    .update(settings)
+    .set(logoPath === undefined ? data : { ...data, logoPath })
+    .where(eq(settings.id, 1));
 }
 
 export async function updateRequestType(

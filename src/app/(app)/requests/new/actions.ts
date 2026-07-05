@@ -18,9 +18,12 @@ export async function submitNewRequest(
   formData: FormData,
 ): Promise<NewRequestState> {
   const actor = await requireActor();
-  const raw = Object.fromEntries(
-    [...formData.entries()].filter(([, v]) => typeof v === "string"),
-  );
+  const raw = {
+    ...Object.fromEntries([...formData.entries()].filter(([, v]) => typeof v === "string")),
+    // الحقول متعددة القيم — Object.fromEntries يبقي آخر قيمة فقط
+    sizes: formData.getAll("sizes").filter((v) => typeof v === "string" && v),
+    channels: formData.getAll("channels").filter((v) => typeof v === "string" && v),
+  };
 
   const parsed = createRequestSchema.safeParse(raw);
   if (!parsed.success) {

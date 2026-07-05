@@ -3,7 +3,7 @@
 // نموذج إعدادات SLA (SPEC §12/05): المصفوفة + تقويم العمل + قواعد التشغيل.
 
 import { useActionState, useState, useTransition } from "react";
-import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2, Trash2, Wrench, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Info, Plus, Save, SlidersHorizontal, Table2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,8 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DESIGN_TOOLS, PRIORITY_META, TOOL_META, WORK_DAY_HOURS } from "@/core/constants";
-import type { ToolFactors } from "@/core/types";
+import { PRIORITY_META, WORK_DAY_HOURS } from "@/core/constants";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { SettingsState } from "@/app/(app)/settings/actions";
 
@@ -59,7 +58,6 @@ interface SettingsValues {
   loadLowPct: number;
   loadHighPct: number;
   responseSlaH: number;
-  toolFactors: ToolFactors | null;
 }
 
 function NumberField({
@@ -309,40 +307,6 @@ export function SlaSettingsForm({
               {deleteState.error}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
-
-      {/* معاملات أدوات التنفيذ */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Wrench className="size-4" />
-            معاملات أدوات التنفيذ
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            يُضرب هدف SLA في معامل الأداة المختارة في الطلب: 1 = الأساس
-            (بوربوينت)، وأقل من 1 يعني إنجازًا أسرع (مثال: إليستريتور 0.85).
-          </p>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-7">
-          {DESIGN_TOOLS.map((tool) => (
-            <div key={tool} className="space-y-1.5">
-              <Label htmlFor={`tool-${tool}-factor`} className="text-xs">
-                {TOOL_META[tool].label}
-              </Label>
-              <Input
-                id={`tool-${tool}-factor`}
-                name={`tool-${tool}-factor`}
-                type="number"
-                min={0.25}
-                max={4}
-                step={0.05}
-                defaultValue={settings.toolFactors?.[tool] ?? TOOL_META[tool].defaultFactor}
-                dir="ltr"
-                className="w-24"
-              />
-            </div>
-          ))}
         </CardContent>
       </Card>
 

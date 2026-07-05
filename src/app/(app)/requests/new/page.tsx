@@ -60,7 +60,7 @@ export default async function NewRequestPage({
           extraUnitH: t.extraUnitH,
         }))}
         cfg={toCalendarCfg(settingsRow)}
-        toolFactors={settingsRow.toolFactors}
+        channels={settingsRow.channels}
         defaultDepartmentId={actor.departmentId}
         requesterName={actor.name}
         action={submitNewRequest}

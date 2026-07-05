@@ -16,7 +16,6 @@ import {
   UploadCloud,
   User,
   History,
-  Wrench,
 } from "lucide-react";
 import { PriorityBadge, SlaBadge, StatusBadge } from "@/components/domain/badges";
 import { ActivityLog } from "@/components/domain/activity-log";
@@ -27,7 +26,7 @@ import { RequestTimeline } from "@/components/domain/request-timeline";
 import { SlaProgressCard } from "@/components/domain/sla-progress-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ROLE_META, TOOL_META } from "@/core/constants";
+import { ROLE_META } from "@/core/constants";
 import type { Status } from "@/core/types";
 import { requireActor } from "@/lib/auth";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
@@ -263,8 +262,12 @@ export default async function RequestDetailsPage({
                 value={formatDate(request.publishDueDate)}
               />
             ) : null}
-            {request.channel ? (
-              <SummaryRow icon={Megaphone} label="قناة الاستخدام" value={request.channel} />
+            {request.channels?.length ? (
+              <SummaryRow
+                icon={Megaphone}
+                label="قنوات الاستخدام"
+                value={request.channels.join("، ")}
+              />
             ) : null}
             {request.sizes ? (
               <SummaryRow
@@ -278,13 +281,6 @@ export default async function RequestDetailsPage({
                 icon={Layers}
                 label="حجم الطلب"
                 value={`${formatNumber(request.unitCount)} ${type.unitLabel}`}
-              />
-            ) : null}
-            {request.tool ? (
-              <SummaryRow
-                icon={Wrench}
-                label="أداة التنفيذ"
-                value={TOOL_META[request.tool].label}
               />
             ) : null}
             <div className="border-t pt-3 text-sm">

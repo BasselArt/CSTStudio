@@ -1,7 +1,7 @@
 // مخططات Zod — تُعرَّف مرة واحدة وتُستخدم في النموذج (client) وserver action معًا (SPEC §4.6).
 
 import { z } from "zod";
-import { DESIGN_TOOLS, PRIORITIES, ROLES, STATUSES } from "@/core/constants";
+import { PRIORITIES, ROLES, STATUSES } from "@/core/constants";
 
 export const loginSchema = z.object({
   email: z.string().email("أدخل بريدًا إلكترونيًا صحيحًا."),
@@ -37,10 +37,11 @@ export const createRequestSchema = z.object({
   publishDueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "اختر تاريخ النشر المطلوب."),
+  /** المقاسات: اختيار متعدد من SIZE_OPTIONS + «أخرى» نصية — تُخزَّن نصًا مفصولًا */
   sizes: z
-    .string()
-    .min(2, "أدخل المقاسات المطلوبة.")
-    .max(200, "المقاسات تتجاوز 200 حرف."),
+    .array(z.string().trim().min(1).max(60, "المقاس يتجاوز 60 حرفًا."))
+    .min(1, "اختر مقاسًا واحدًا على الأقل.")
+    .max(20, "عدد المقاسات يتجاوز 20."),
   /** حجم الطلب بوحدات النوع (صفحات/شرائح) — اختياري، يوسّع هدف SLA */
   unitCount: z.preprocess(
     (v) => (v === "" || v == null ? undefined : Number(v)),
@@ -51,12 +52,9 @@ export const createRequestSchema = z.object({
       .max(1000, "الحجم يتجاوز 1000 وحدة.")
       .optional(),
   ),
-  /** أداة التنفيذ المتوقعة — اختيارية، معاملها يدخل في هدف SLA */
-  tool: z.preprocess(
-    (v) => (v === "" || v == null ? undefined : v),
-    z.enum(DESIGN_TOOLS, "اختر أداة تنفيذ صحيحة.").optional(),
-  ),
-  channel: z.string().min(2, "اختر قناة الاستخدام.").max(100),
+  channels: z
+    .array(z.string().min(2, "اسم القناة قصير.").max(100))
+    .min(1, "اختر قناة استخدام واحدة على الأقل."),
   priority: z.enum(PRIORITIES, "اختر الأولوية."),
   urgentJustification: optionalText(500),
   /** طلب تعديل مرتبط بطلب أصلي بعد استنفاد جولات المراجعة (SPEC §6) */
@@ -132,14 +130,6 @@ export const settingsSchema = z.object({
   loadLowPct: z.coerce.number().int().min(1).max(100),
   loadHighPct: z.coerce.number().int().min(1).max(100),
   responseSlaH: z.coerce.number().int().min(1).max(40),
-  /** معاملات أدوات التنفيذ: 1 = الأساس — بين 0.25 و4 */
-  toolFactors: z.record(
-    z.enum(DESIGN_TOOLS),
-    z.coerce
-      .number("معامل الأداة رقم.")
-      .min(0.25, "معامل الأداة لا يقل عن 0.25.")
-      .max(4, "معامل الأداة لا يتجاوز 4."),
-  ),
 })
 .refine((v) => v.loadLowPct < v.loadHighPct, {
   path: ["loadHighPct"],
@@ -148,6 +138,15 @@ export const settingsSchema = z.object({
 .refine((v) => v.workStart < v.workEnd, {
   path: ["workEnd"],
   message: "نهاية الدوام يجب أن تلي بدايته.",
+});
+
+/** هوية النظام (صفحة الإعدادات): الاسم والوصف وقائمة قنوات الاستخدام */
+export const brandingSchema = z.object({
+  orgName: z.string().trim().min(2, "أدخل اسم الاستوديو.").max(100, "الاسم يتجاوز 100 حرف."),
+  orgSubtitle: z.string().trim().max(150, "الوصف يتجاوز 150 حرفًا."),
+  channels: z
+    .array(z.string().trim().min(2, "اسم القناة قصير.").max(100))
+    .min(1, "أضف قناة استخدام واحدة على الأقل."),
 });
 
 const userFields = {

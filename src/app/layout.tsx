@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { Direction } from "radix-ui";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { getSettings } from "@/services/settings";
 
 const plexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-sans",
@@ -10,10 +11,14 @@ const plexArabic = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
 });
 
-export const metadata: Metadata = {
-  title: "استوديو التصميم — هيئة الاتصالات والفضاء والتقنية",
-  description: "نظام إدارة طلبات استوديو التصميم",
-};
+/** عنوان التبويب من هوية النظام في الإعدادات */
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  return {
+    title: s.orgSubtitle ? `${s.orgName} — ${s.orgSubtitle}` : s.orgName,
+    description: "نظام إدارة طلبات استوديو التصميم",
+  };
+}
 
 export default function RootLayout({
   children,

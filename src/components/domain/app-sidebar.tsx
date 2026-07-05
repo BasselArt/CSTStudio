@@ -1,6 +1,6 @@
 "use client";
 
-// القائمة الجانبية اليمنى الكحلية (SPEC §12) — بزر طي.
+// القائمة الجانبية اليمنى الكحلية (SPEC §12) — بزر طي، والهوية من الإعدادات.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,8 +9,8 @@ import {
   ChevronRight,
   ClipboardList,
   LayoutGrid,
-  PlusCircle,
   Settings,
+  SlidersHorizontal,
   UserCog,
   Users,
 } from "lucide-react";
@@ -36,14 +36,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/requests",
     label: "الطلبات",
     icon: ClipboardList,
-    match: (p) => p === "/requests" || (p.startsWith("/requests/") && p !== "/requests/new"),
-  },
-  {
-    href: "/requests/new",
-    label: "طلب جديد",
-    icon: PlusCircle,
-    match: (p) => p === "/requests/new",
-    roles: ["requester", "studio_manager"],
+    match: (p) => p === "/requests" || p.startsWith("/requests/"),
   },
   {
     href: "/team",
@@ -53,10 +46,10 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["studio_manager", "executive"],
   },
   {
-    href: "/settings",
+    href: "/settings/sla",
     label: "إعدادات SLA",
-    icon: Settings,
-    match: (p) => p === "/settings",
+    icon: SlidersHorizontal,
+    match: (p) => p === "/settings/sla",
     roles: ["studio_manager"],
   },
   {
@@ -66,9 +59,26 @@ const NAV_ITEMS: NavItem[] = [
     match: (p) => p === "/users",
     roles: ["studio_manager"],
   },
+  {
+    href: "/settings",
+    label: "الإعدادات",
+    icon: Settings,
+    match: (p) => p === "/settings",
+    roles: ["studio_manager"],
+  },
 ];
 
-export function AppSidebar({ role }: { role: Role }) {
+export function AppSidebar({
+  role,
+  orgName,
+  orgSubtitle,
+  hasLogo,
+}: {
+  role: Role;
+  orgName: string;
+  orgSubtitle: string;
+  hasLogo: boolean;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -79,16 +89,22 @@ export function AppSidebar({ role }: { role: Role }) {
         collapsed ? "w-16" : "w-64",
       )}
     >
-      <div className="flex items-center gap-3 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-sidebar-primary text-sm font-bold">
-          CST
+      <div className={cn("flex items-center gap-3 p-4", collapsed && "justify-center px-0")}>
+        <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-sidebar-primary text-sm font-bold">
+          {hasLogo ? (
+            // شعار من الإعدادات — img عادي يكفي (خارج تحسين next/image عمدًا)
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/api/branding/logo" alt={orgName} className="size-full object-contain p-1" />
+          ) : (
+            "CST"
+          )}
         </span>
         {!collapsed ? (
           <div className="min-w-0">
-            <p className="truncate font-bold">استوديو التصميم</p>
-            <p className="truncate text-xs text-sidebar-foreground/70">
-              هيئة الاتصالات والفضاء والتقنية
-            </p>
+            <p className="truncate font-bold">{orgName}</p>
+            {orgSubtitle ? (
+              <p className="truncate text-xs text-sidebar-foreground/70">{orgSubtitle}</p>
+            ) : null}
           </div>
         ) : null}
       </div>

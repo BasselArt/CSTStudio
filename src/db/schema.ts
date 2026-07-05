@@ -2,7 +2,7 @@
 // التواريخ تُخزَّن نصوصًا ISO بتوقيت UTC وتُحوَّل عند الحساب والعرض (Asia/Riyadh).
 
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import type { DesignTool, EventType, Priority, Role, Status, ToolFactors } from "@/core/types";
+import type { EventType, Priority, Role, Status } from "@/core/types";
 
 export const departments = sqliteTable("departments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -69,9 +69,8 @@ export const requests = sqliteTable("requests", {
   sizes: text("sizes"),
   /** حجم الطلب بوحدات النوع (صفحات/شرائح) — يدخل في معادلة هدف SLA */
   unitCount: integer("unit_count"),
-  /** أداة التنفيذ المتوقعة — معاملها يدخل في معادلة هدف SLA */
-  tool: text("tool").$type<DesignTool>(),
-  channel: text("channel"),
+  /** قنوات الاستخدام المختارة — من قائمة settings.channels */
+  channels: text("channels", { mode: "json" }).$type<string[]>(),
   publishDueDate: text("publish_due_date"),
   reviewRound: integer("review_round").notNull().default(0),
   relatedRequestId: integer("related_request_id"),
@@ -145,8 +144,13 @@ export const settings = sqliteTable("settings", {
   loadLowPct: integer("load_low_pct").notNull().default(40),
   loadHighPct: integer("load_high_pct").notNull().default(75),
   responseSlaH: integer("response_sla_h").notNull().default(4),
-  /** معاملات أدوات التنفيذ — null أو مفتاح غائب = المعامل الافتراضي في TOOL_META */
-  toolFactors: text("tool_factors", { mode: "json" }).$type<ToolFactors>(),
+  /** هوية النظام — تظهر في السايدبار وصفحة الدخول وعنوان التبويب */
+  orgName: text("org_name").notNull().default("استوديو التصميم"),
+  orgSubtitle: text("org_subtitle").notNull().default("هيئة الاتصالات والفضاء والتقنية"),
+  /** مسار الشعار داخل storage/uploads — null = الشعار النصي الافتراضي */
+  logoPath: text("logo_path"),
+  /** قائمة قنوات الاستخدام المتاحة في نموذج الطلب — تُدار من صفحة الإعدادات */
+  channels: text("channels", { mode: "json" }).$type<string[]>().notNull().default([]),
 });
 
 /** عدّاد الترقيم السنوي — يُحدَّث داخل transaction لمنع التسابق (SPEC §5) */

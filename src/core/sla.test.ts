@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSla, slaTargetHours, toolFactorFor } from "./sla";
+import { computeSla, slaTargetHours } from "./sla";
 import type { CalendarCfg, StatusChange } from "./types";
 
 const cfg: CalendarCfg = {
@@ -343,7 +343,7 @@ describe("slaTargetHours — مصفوفة النوع × الأولوية", () =>
   });
 });
 
-describe("slaTargetHours — تنويع الحجم وأداة التنفيذ", () => {
+describe("slaTargetHours — تنويع الحجم", () => {
   // تصميم متوسط: الهدف الأساسي يغطي 5 صفحات، وكل صفحة إضافية +1.5 ساعة
   const medium = {
     slaNormalH: 24,
@@ -373,50 +373,16 @@ describe("slaTargetHours — تنويع الحجم وأداة التنفيذ", (
     expect(slaTargetHours(medium, "high", false, { unitCount: 30 })).toBe(54);
   });
 
-  it("معامل الأداة يضرب الهدف: إليستريتور 0.85 × 24 → 20", () => {
-    expect(slaTargetHours(medium, "normal", false, { toolFactor: 0.85 })).toBe(20);
-  });
-
-  it("الحجم والأداة معًا: (16 + 25×1.5) × 0.85 = 45.475 → 45", () => {
-    expect(
-      slaTargetHours(medium, "high", false, { unitCount: 30, toolFactor: 0.85 }),
-    ).toBe(45);
-  });
-
   it("عاجل غير معتمد: التمديد يطبَّق على أساس «عالي»", () => {
     expect(slaTargetHours(medium, "urgent", false, { unitCount: 30 })).toBe(54);
   });
 
-  it("عاجل معتمد «باتفاق» يبقى null — المدة اليدوية لا تُمدَّد ولا تُضرب", () => {
-    expect(
-      slaTargetHours(big, "urgent", true, { unitCount: 50, toolFactor: 0.7 }),
-    ).toBeNull();
+  it("عاجل معتمد «باتفاق» يبقى null — المدة اليدوية لا تُمدَّد", () => {
+    expect(slaTargetHours(big, "urgent", true, { unitCount: 50 })).toBeNull();
   });
 
   it("نوع بلا إعداد وحدات يتجاهل الحجم", () => {
     const simpleEdit = { slaNormalH: 8, slaHighH: 4, slaUrgentH: 2 };
     expect(slaTargetHours(simpleEdit, "normal", false, { unitCount: 40 })).toBe(8);
-  });
-
-  it("الحد الأدنى ساعة عمل واحدة مهما صغر المعامل", () => {
-    const tiny = { slaNormalH: 2, slaHighH: 1, slaUrgentH: 1 };
-    expect(slaTargetHours(tiny, "high", false, { toolFactor: 0.25 })).toBe(1);
-  });
-});
-
-describe("toolFactorFor — معامل أداة التنفيذ", () => {
-  it("بلا أداة = 1 (لا تأثير)", () => {
-    expect(toolFactorFor(null)).toBe(1);
-    expect(toolFactorFor(undefined)).toBe(1);
-  });
-
-  it("الافتراضي من TOOL_META: بوربوينت 1 وإليستريتور 0.85", () => {
-    expect(toolFactorFor("powerpoint")).toBe(1);
-    expect(toolFactorFor("illustrator")).toBe(0.85);
-  });
-
-  it("قيمة الإعدادات تتقدم على الافتراضي، والمفتاح الغائب يسقط عليه", () => {
-    expect(toolFactorFor("illustrator", { illustrator: 0.6 })).toBe(0.6);
-    expect(toolFactorFor("canva", { illustrator: 0.6 })).toBe(0.7);
   });
 });
