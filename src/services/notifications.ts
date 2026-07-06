@@ -60,3 +60,10 @@ export async function markAllRead(userId: number): Promise<void> {
     .set({ readAt: nowIso() })
     .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
 }
+
+export async function markRead(userId: number, id: number): Promise<void> {
+  await db
+    .update(notifications)
+    .set({ readAt: nowIso() })
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId), isNull(notifications.readAt)));
+}

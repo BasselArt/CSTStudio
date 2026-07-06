@@ -58,6 +58,16 @@ export function NotificationsBell({
     refresh();
   }
 
+  function markRead(id: number) {
+    const wasUnread = items.find((n) => n.id === id)?.readAt == null;
+    if (!wasUnread) return;
+    setItems((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+    );
+    setCount((prev) => Math.max(0, prev - 1));
+    void fetch(`/api/notifications/${id}`, { method: "POST" });
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -91,6 +101,7 @@ export function NotificationsBell({
             <DropdownMenuItem key={n.id} asChild className="cursor-pointer">
               <Link
                 href={n.requestId ? `/requests/${n.requestId}` : "/requests"}
+                onClick={() => markRead(n.id)}
                 className="flex w-full flex-col items-start gap-0.5"
               >
                 <span className={n.readAt ? "text-muted-foreground" : "font-medium"}>
