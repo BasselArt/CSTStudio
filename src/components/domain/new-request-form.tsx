@@ -236,9 +236,7 @@ export function NewRequestForm({
               <Input id="requesterName" value={requesterName} disabled />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact">
-                البريد الإلكتروني أو رقم التواصل <span className="text-danger">*</span>
-              </Label>
+              <Label htmlFor="contact">البريد الإلكتروني أو رقم التواصل</Label>
               <Input
                 id="contact"
                 name="contact"
