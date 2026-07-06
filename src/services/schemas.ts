@@ -18,10 +18,7 @@ const optionalText = (max: number) =>
 
 export const createRequestSchema = z.object({
   departmentId: z.coerce.number().int().positive("اختر الجهة."),
-  contact: z
-    .string()
-    .min(3, "أدخل البريد الإلكتروني أو رقم التواصل.")
-    .max(150, "قيمة التواصل طويلة."),
+  contact: optionalText(150),
   title: z
     .string()
     .min(5, "يرجى إدخال عنوان الطلب.")
