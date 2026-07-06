@@ -3,7 +3,7 @@
 // نموذج طلب جديد (SPEC §12/03): أربعة أقسام + ملخص جانبي حي يحسب الهدف
 // والتاريخ المتوقع عبر دوال core مباشرة، وأخطاء التحقق تحت الحقول.
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Bookmark,
@@ -155,7 +155,13 @@ export function NewRequestForm({
   const [state, formAction, pending] = useActionState(action, { fieldErrors: {} });
   const errors = state.fieldErrors;
 
+  const [departmentId, setDepartmentId] = useState(
+    defaultDepartmentId ? String(defaultDepartmentId) : "",
+  );
+  const [contact, setContact] = useState("");
+  const [title, setTitle] = useState("");
   const [typeId, setTypeId] = useState<number | null>(defaultTypeId ?? null);
+  const [language, setLanguage] = useState<"ar" | "en" | "both">("ar");
   const [priority, setPriority] = useState<Priority>("normal");
   const [unitCount, setUnitCount] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
@@ -166,7 +172,34 @@ export function NewRequestForm({
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
   const [audience, setAudience] = useState("");
+  const [urgentJustification, setUrgentJustification] = useState("");
+  const [referenceLinks, setReferenceLinks] = useState("");
+  const [requiredTexts, setRequiredTexts] = useState("");
+  const [extraNotes, setExtraNotes] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
+
+  /* عند فشل التحقق، مرّر الشاشة إلى أول حقل خاطئ ورَكّز عليه (بدل ترك المستخدم يبحث يدويًا) */
+  useEffect(() => {
+    const order = [
+      "departmentId",
+      "contact",
+      "title",
+      "typeId",
+      "description",
+      "publishDueDate",
+      "unitCount",
+      "sizes",
+      "channels",
+      "urgentJustification",
+      "files",
+    ];
+    const firstKey = order.find((k) => errors[k]);
+    if (!firstKey) return;
+    const el = document.getElementById(firstKey);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus?.({ preventScroll: true });
+  }, [errors]);
 
   const selectedType = types.find((t) => t.id === typeId) ?? null;
 
@@ -214,11 +247,8 @@ export function NewRequestForm({
               <Label htmlFor="departmentId">
                 الجهة <span className="text-danger">*</span>
               </Label>
-              <Select
-                name="departmentId"
-                defaultValue={defaultDepartmentId ? String(defaultDepartmentId) : undefined}
-              >
-                <SelectTrigger id="departmentId" className="w-full">
+              <Select name="departmentId" value={departmentId} onValueChange={setDepartmentId}>
+                <SelectTrigger id="departmentId" className="w-full" aria-invalid={!!errors.departmentId}>
                   <SelectValue placeholder="اختر الجهة" />
                 </SelectTrigger>
                 <SelectContent>
@@ -241,6 +271,8 @@ export function NewRequestForm({
                 id="contact"
                 name="contact"
                 placeholder="أدخل البريد الإلكتروني أو رقم الجوال"
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
               />
               <FieldError message={errors.contact} />
             </div>
@@ -253,11 +285,17 @@ export function NewRequestForm({
             <Label htmlFor="title">
               عنوان الطلب <span className="text-danger">*</span>
             </Label>
-            <Input id="title" name="title" aria-invalid={!!errors.title} />
+            <Input
+              id="title"
+              name="title"
+              aria-invalid={!!errors.title}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
             <FieldError message={errors.title} />
           </div>
 
-          <div className="space-y-2">
+          <div id="typeId" className="space-y-2">
             <Label>
               نوع التصميم <span className="text-danger">*</span>
             </Label>
@@ -354,7 +392,8 @@ export function NewRequestForm({
                   type="radio"
                   name="language"
                   value={value}
-                  defaultChecked={value === "ar"}
+                  checked={language === value}
+                  onChange={() => setLanguage(value)}
                   className="accent-[var(--color-navy)]"
                 />
                 {label}
@@ -423,7 +462,7 @@ export function NewRequestForm({
             ) : null}
           </div>
 
-          <div className="space-y-2">
+          <div id="sizes" className="space-y-2">
             <Label>
               المقاسات المطلوبة <span className="text-danger">*</span>
               <span className="ms-2 text-[10px] font-normal text-muted-foreground">
@@ -466,7 +505,7 @@ export function NewRequestForm({
             <FieldError message={errors.sizes} />
           </div>
 
-          <div className="space-y-2">
+          <div id="channels" className="space-y-2">
             <Label>
               قنوات الاستخدام <span className="text-danger">*</span>
               <span className="ms-2 text-[10px] font-normal text-muted-foreground">
@@ -505,6 +544,8 @@ export function NewRequestForm({
                   name="urgentJustification"
                   rows={2}
                   placeholder="اكتب السبب بالتفصيل…"
+                  value={urgentJustification}
+                  onChange={(e) => setUrgentJustification(e.target.value)}
                 />
                 <FieldError message={errors.urgentJustification} />
               </div>
@@ -558,6 +599,8 @@ export function NewRequestForm({
                   id="referenceLinks"
                   name="referenceLinks"
                   placeholder="أضف روابط لمراجع أو أمثلة تصميم (اختياري)"
+                  value={referenceLinks}
+                  onChange={(e) => setReferenceLinks(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -567,6 +610,8 @@ export function NewRequestForm({
                   name="requiredTexts"
                   rows={2}
                   placeholder="أدخل النصوص التي يجب تضمينها في التصميم"
+                  value={requiredTexts}
+                  onChange={(e) => setRequiredTexts(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -576,6 +621,8 @@ export function NewRequestForm({
                   name="extraNotes"
                   rows={2}
                   placeholder="أي ملاحظات أو معلومات إضافية تساعد في تنفيذ الطلب…"
+                  value={extraNotes}
+                  onChange={(e) => setExtraNotes(e.target.value)}
                 />
               </div>
             </div>
