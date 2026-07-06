@@ -19,19 +19,19 @@ pnpm dev
 
 | الدور | الاسم | البريد |
 |---|---|---|
-| مسؤول الاستوديو | أحمد العتيبي | `a.alotaibi@cst.gov.sa` |
+| مسؤول الاستوديو | محمد خولي | `m.alkhouli@cst.gov.sa` |
 | مصممة | نورة الشهري | `n.alshahri@cst.gov.sa` |
 | مصممة | سارة المطيري | `s.almutairi@cst.gov.sa` |
-| مصمم | محمد الزهراني | `m.alzahrani@cst.gov.sa` |
-| مصمم | علي الحربي | `a.alharbi@cst.gov.sa` |
-| مصمم | خالد الزهراني | `k.alzahrani@cst.gov.sa` |
+| مصمم | محمد صبحي | `m.sobhy@cst.gov.sa` |
+| مصمم | أحمد نبيل | `a.nabil@cst.gov.sa` |
+| مصمم | أحمد السعيد | `a.alsaeed@cst.gov.sa` |
 | مصممة | ريم العتيبي | `r.alotaibi@cst.gov.sa` |
 | طالبة خدمة — الاتصال المؤسسي | مها القحطاني | `m.alqahtani@cst.gov.sa` |
 | طالب خدمة — الشؤون القانونية | فهد العنزي | `f.alanazi@cst.gov.sa` |
 | طالب خدمة — تقنية المعلومات | عبدالله السبيعي | `a.alsubaie@cst.gov.sa` |
 | طالبة خدمة — الموارد البشرية | سلمى الدوسري | `s.aldossari@cst.gov.sa` |
 | طالب خدمة — إدارة المشاريع | يوسف الشمري | `y.alshammari@cst.gov.sa` |
-| المدير (قراءة فقط) | د. سلطان الرشيد | `s.alrashid@cst.gov.sa` |
+| المدير العام (قراءة فقط) | محمد العبدان | `m.alabdan@cst.gov.sa` |
 
 ## الأوامر
 

@@ -215,24 +215,24 @@ async function main() {
   const userRows = db
     .insert(users)
     .values([
-      mkUser("أحمد العتيبي", "a.alotaibi@cst.gov.sa", "studio_manager"),
+      mkUser("محمد خولي", "m.alkhouli@cst.gov.sa", "studio_manager"),
       mkUser("نورة الشهري", "n.alshahri@cst.gov.sa", "designer"),
       mkUser("سارة المطيري", "s.almutairi@cst.gov.sa", "designer"),
-      mkUser("محمد الزهراني", "m.alzahrani@cst.gov.sa", "designer"),
-      mkUser("علي الحربي", "a.alharbi@cst.gov.sa", "designer"),
-      mkUser("خالد الزهراني", "k.alzahrani@cst.gov.sa", "designer"),
+      mkUser("محمد صبحي", "m.sobhy@cst.gov.sa", "designer"),
+      mkUser("أحمد نبيل", "a.nabil@cst.gov.sa", "designer"),
+      mkUser("أحمد السعيد", "a.alsaeed@cst.gov.sa", "designer"),
       mkUser("ريم العتيبي", "r.alotaibi@cst.gov.sa", "designer"),
       mkUser("مها القحطاني", "m.alqahtani@cst.gov.sa", "requester", "الاتصال المؤسسي"),
       mkUser("فهد العنزي", "f.alanazi@cst.gov.sa", "requester", "الشؤون القانونية"),
       mkUser("عبدالله السبيعي", "a.alsubaie@cst.gov.sa", "requester", "تقنية المعلومات"),
       mkUser("سلمى الدوسري", "s.aldossari@cst.gov.sa", "requester", "الموارد البشرية"),
       mkUser("يوسف الشمري", "y.alshammari@cst.gov.sa", "requester", "إدارة المشاريع"),
-      mkUser("د. سلطان الرشيد", "s.alrashid@cst.gov.sa", "executive"),
+      mkUser("محمد العبدان", "m.alabdan@cst.gov.sa", "executive"),
     ])
     .returning()
     .all();
   const userByEmail = new Map(userRows.map((u) => [u.email, u]));
-  const manager = userByEmail.get("a.alotaibi@cst.gov.sa")!;
+  const manager = userByEmail.get("m.alkhouli@cst.gov.sa")!;
 
   /* ------------------------------------------------------------------ */
   /* الطلبات (~34) — موزعة واقعيًا على الحالات (SPEC §15)                */
@@ -277,7 +277,7 @@ async function main() {
       title: "مطوية التوعية القانونية",
       description: "مطوية عن حقوق المستفيدين والتزامات مقدمي الخدمة.",
       dept: "الشؤون القانونية", requesterEmail: "f.alanazi@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "normal", designerEmail: "k.alzahrani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "normal", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 20,
       steps: [
         { to: "ready", afterH: 3 },
@@ -307,7 +307,7 @@ async function main() {
       title: "شعار مبادرة الاستدامة الرقمية",
       description: "شعار فرعي لمبادرة الاستدامة الرقمية ضمن الهوية المؤسسية.",
       dept: "إدارة المشاريع", requesterEmail: "y.alshammari@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "urgent", designerEmail: "m.alzahrani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "urgent", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 6, steps: [{ to: "ready", afterH: 1 }],
       urgentJustification: "إطلاق المبادرة مرتبط بفعالية وزارية مؤكدة الأسبوع القادم.",
       urgentApprovedAfterH: 1.5,
@@ -348,7 +348,7 @@ async function main() {
       title: "غلاف تقرير التحول الرقمي",
       description: "غلاف وتصميم داخلي مختصر لتقرير التحول الرقمي السنوي.",
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.alzahrani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 24,
       steps: [
         { to: "ready", afterH: 1 },
@@ -362,7 +362,7 @@ async function main() {
       title: "عرض تقديمي لورشة الحوكمة",
       description: "قالب عرض تقديمي لورشة عمل الحوكمة الرقمية.",
       dept: "الشؤون القانونية", requesterEmail: "f.alanazi@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "high", designerEmail: "k.alzahrani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "high", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 12,
       steps: [
         { to: "ready", afterH: 1 },
@@ -376,7 +376,7 @@ async function main() {
       title: "حملة التوظيف السنوية",
       description: "هوية بصرية متكاملة لحملة التوظيف السنوية بمخرجات متعددة.",
       dept: "الموارد البشرية", requesterEmail: "s.aldossari@cst.gov.sa",
-      typeName: "تصميم كبير", priority: "normal", designerEmail: "a.alharbi@cst.gov.sa",
+      typeName: "تصميم كبير", priority: "normal", designerEmail: "a.nabil@cst.gov.sa",
       ageH: 6,
       steps: [
         { to: "ready", afterH: 1 },
@@ -388,7 +388,7 @@ async function main() {
       title: "تعديل ألوان مطوية الخدمات",
       description: "مواءمة ألوان مطوية الخدمات مع تحديث الهوية.",
       dept: "إدارة المشاريع", requesterEmail: "y.alshammari@cst.gov.sa",
-      typeName: "تعديل بسيط", priority: "normal", designerEmail: "k.alzahrani@cst.gov.sa",
+      typeName: "تعديل بسيط", priority: "normal", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 2,
       steps: [
         { to: "ready", afterH: 0.5 },
@@ -428,7 +428,7 @@ async function main() {
       title: "منشورات حملة الأمن السيبراني",
       description: "أربعة منشورات توعوية لحملة الأمن السيبراني الوطنية.",
       dept: "تقنية المعلومات", requesterEmail: "a.alsubaie@cst.gov.sa",
-      typeName: "تصميم كبير", priority: "high", designerEmail: "m.alzahrani@cst.gov.sa",
+      typeName: "تصميم كبير", priority: "high", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 20,
       steps: [
         { to: "ready", afterH: 1 },
@@ -470,7 +470,7 @@ async function main() {
       title: "مطوية خدمات الهيئة",
       description: "مطوية شاملة بخدمات الهيئة للجمهور — طباعة ونسخة رقمية.",
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
-      typeName: "تصميم كبير", priority: "normal", designerEmail: "k.alzahrani@cst.gov.sa",
+      typeName: "تصميم كبير", priority: "normal", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 10,
       steps: [
         { to: "ready", afterH: 1 },
@@ -539,7 +539,7 @@ async function main() {
       title: "شهادة شكر للمتقاعدين",
       description: "تصميم شهادة شكر وتقدير لحفل المتقاعدين.",
       dept: "الموارد البشرية", requesterEmail: "s.aldossari@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "normal", designerEmail: "a.alharbi@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "normal", designerEmail: "a.nabil@cst.gov.sa",
       ageH: 20,
       steps: [
         { to: "ready", afterH: 1 },
@@ -611,7 +611,7 @@ async function main() {
       title: "دعوة ورشة إدارة المخاطر",
       description: "بطاقة دعوة رقمية لورشة إدارة المخاطر.",
       dept: "إدارة المشاريع", requesterEmail: "y.alshammari@cst.gov.sa",
-      typeName: "تصميم بسيط", priority: "normal", designerEmail: "a.alharbi@cst.gov.sa",
+      typeName: "تصميم بسيط", priority: "normal", designerEmail: "a.nabil@cst.gov.sa",
       ageH: 60,
       steps: [
         { to: "ready", afterH: 2 },
@@ -626,7 +626,7 @@ async function main() {
       title: "تقرير ملخص المشاريع الربعي",
       description: "تنسيق تقرير ملخص المشاريع الربعي مع رسوم بيانية.",
       dept: "إدارة المشاريع", requesterEmail: "y.alshammari@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.alzahrani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 80,
       steps: [
         { to: "ready", afterH: 2 },
@@ -669,7 +669,7 @@ async function main() {
       title: "تعديل شعار قديم",
       description: "تعديل على شعار وحدة أُعيد هيكلتها.",
       dept: "الشؤون القانونية", requesterEmail: "f.alanazi@cst.gov.sa",
-      typeName: "تعديل بسيط", priority: "normal", designerEmail: "k.alzahrani@cst.gov.sa",
+      typeName: "تعديل بسيط", priority: "normal", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 35,
       steps: [
         { to: "ready", afterH: 2 },
@@ -708,7 +708,7 @@ async function main() {
       title: "تصحيح بيانات بطاقة معايدة",
       description: "تصحيح أسماء ومناصب في بطاقة معايدة رسمية.",
       dept: "الموارد البشرية", requesterEmail: "s.aldossari@cst.gov.sa",
-      typeName: "تعديل بسيط", priority: "normal", designerEmail: "k.alzahrani@cst.gov.sa",
+      typeName: "تعديل بسيط", priority: "normal", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 300,
       steps: [
         { to: "ready", afterH: 1 },
@@ -737,7 +737,7 @@ async function main() {
       title: "جناح معرض التقنية الحكومي",
       description: "تصاميم جناح الهيئة في معرض التقنية الحكومي بمخرجاته المتعددة.",
       dept: "إدارة المشاريع", requesterEmail: "y.alshammari@cst.gov.sa",
-      typeName: "تصميم كبير", priority: "normal", designerEmail: "a.alharbi@cst.gov.sa",
+      typeName: "تصميم كبير", priority: "normal", designerEmail: "a.nabil@cst.gov.sa",
       ageH: 240,
       steps: [
         { to: "ready", afterH: 3 },
@@ -767,7 +767,7 @@ async function main() {
       title: "عرض نتائج الربع الأول",
       description: "عرض تقديمي لنتائج الربع الأول أمام اللجنة التنفيذية.",
       dept: "تقنية المعلومات", requesterEmail: "a.alsubaie@cst.gov.sa",
-      typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.alzahrani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 200,
       steps: [
         { to: "ready", afterH: 2 },

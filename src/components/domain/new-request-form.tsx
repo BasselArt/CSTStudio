@@ -14,8 +14,10 @@ import {
   LayoutTemplate,
   Mail,
   PencilLine,
+  Plus,
   Send,
   UploadCloud,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -160,7 +162,17 @@ export function NewRequestForm({
   const [unitCount, setUnitCount] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [otherSizeOn, setOtherSizeOn] = useState(false);
-  const [otherSize, setOtherSize] = useState("");
+  const [otherSizeDraft, setOtherSizeDraft] = useState("");
+  /** مقاسات مخصّصة أضافها المستخدم عبر «أخرى» — يمكن إضافة أكثر من واحد */
+  const [customSizes, setCustomSizes] = useState<string[]>([]);
+
+  function addCustomSize() {
+    const value = otherSizeDraft.trim();
+    if (value && !customSizes.includes(value)) {
+      setCustomSizes((prev) => [...prev, value]);
+      setOtherSizeDraft("");
+    }
+  }
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [publishDueDate, setPublishDueDate] = useState("");
   const [description, setDescription] = useState("");
@@ -448,21 +460,59 @@ export function NewRequestForm({
                 أخرى…
               </ToggleChip>
             </div>
+            {customSizes.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {customSizes.map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1 rounded-lg bg-navy/5 px-2 py-1 text-xs text-navy"
+                  >
+                    <span dir="ltr">{s}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes((prev) => prev.filter((x) => x !== s))}
+                      aria-label={`حذف مقاس ${s}`}
+                      className="text-muted-foreground hover:text-danger"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
             {otherSizeOn ? (
-              <Input
-                value={otherSize}
-                onChange={(e) => setOtherSize(e.target.value)}
-                placeholder="اكتب المقاس المطلوب — مثال: 2000x800"
-                className="max-w-72"
-                aria-label="مقاس آخر"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  value={otherSizeDraft}
+                  onChange={(e) => setOtherSizeDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomSize();
+                    }
+                  }}
+                  placeholder="اكتب المقاس المطلوب — مثال: 2000x800"
+                  className="max-w-72"
+                  aria-label="مقاس آخر"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={addCustomSize}
+                >
+                  <Plus className="size-3.5" />
+                  إضافة
+                </Button>
+              </div>
             ) : null}
             {selectedSizes.map((s) => (
               <input key={s} type="hidden" name="sizes" value={s} />
             ))}
-            {otherSizeOn && otherSize.trim() ? (
-              <input type="hidden" name="sizes" value={otherSize.trim()} />
-            ) : null}
+            {customSizes.map((s) => (
+              <input key={s} type="hidden" name="sizes" value={s} />
+            ))}
             <FieldError message={errors.sizes} />
           </div>
 
