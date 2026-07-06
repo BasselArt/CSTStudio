@@ -34,7 +34,7 @@ export const STATUSES = [
 export const STATUS_META: Record<Status, StatusMeta> = {
   new: { label: "جديد", color: "muted", slaEffect: "response" },
   needs_info: { label: "يحتاج استكمال", color: "warning", slaEffect: "paused" },
-  ready: { label: "جاهز للتنفيذ", color: "warning", slaEffect: "running" },
+  ready: { label: "جاهز للتنفيذ", color: "navy", slaEffect: "running" },
   in_progress: { label: "قيد التنفيذ", color: "progress", slaEffect: "running" },
   internal_review: {
     label: "قيد المراجعة الداخلية",
