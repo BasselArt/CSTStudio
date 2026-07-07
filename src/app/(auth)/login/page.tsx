@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getSettings } from "@/services/settings";
+import { getUser } from "@/services/users";
 
 async function login(formData: FormData) {
   "use server";
@@ -28,8 +29,13 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // لا نعيد التوجيه إلا لجلسة يقابلها مستخدم فعّال في القاعدة — الجلسة
+  // اليتيمة (بعد إعادة البذور مثلًا) تبقى هنا ويستبدلها الدخول الجديد
   const session = await auth();
-  if (session?.user) redirect("/");
+  if (session?.user) {
+    const user = await getUser(Number(session.user.id));
+    if (user?.isActive) redirect("/");
+  }
   const [{ error }, settingsRow] = await Promise.all([searchParams, getSettings()]);
 
   return (

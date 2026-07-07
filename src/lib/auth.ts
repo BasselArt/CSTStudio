@@ -6,7 +6,7 @@ import { compareSync } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { authConfig } from "./auth.config";
 import { loginSchema } from "@/services/schemas";
-import { getUserByEmail } from "@/services/users";
+import { getUser, getUserByEmail } from "@/services/users";
 import type { Actor } from "@/services/requests";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -32,14 +32,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 });
 
-/** المنفّذ الحالي للاستخدام في الصفحات وserver actions — يعيد التوجيه لغير المسجل */
+/**
+ * المنفّذ الحالي للاستخدام في الصفحات وserver actions — يعيد التوجيه لغير المسجل.
+ * يتحقق من وجود المستخدم في القاعدة (لا يكتفي بالـ JWT): جلسة يتيمة بعد
+ * إعادة البذور أو حذف/تعطيل المستخدم كانت تُفشل الكتابات بـ
+ * «FOREIGN KEY constraint failed» — الآن تعود لصفحة الدخول، وصفحة الدخول
+ * لا تعيد توجيه الجلسات اليتيمة فيُستبدل الـ cookie عند الدخول الجديد.
+ * القيم تُقرأ من القاعدة لا من الـ token — تغيير الدور/الجهة يسري فورًا.
+ */
 export async function requireActor(): Promise<Actor> {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const user = await getUser(Number(session.user.id));
+  if (!user || !user.isActive) redirect("/login");
   return {
-    id: Number(session.user.id),
-    role: session.user.role,
-    departmentId: session.user.departmentId,
-    name: session.user.name ?? "",
+    id: user.id,
+    role: user.role,
+    departmentId: user.departmentId,
+    name: user.name,
   };
 }
