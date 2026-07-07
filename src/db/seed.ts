@@ -2,6 +2,9 @@
 // تُدرج الأحداث مباشرة (استثناء موثق لقاعدة §4.2 — البذور خارج مسار التشغيل)
 // وتبني سلاسل status_change بساعات عمل حقيقية عبر core/calendar حتى تنتج
 // المشاهد نفسها في الصور: متأخرة، مستحقة قريبًا، متوقفة، ومسلَّمة بإصدارات.
+// أحجام (unitCount) ومواعيد النشر للطلبات النشطة مضبوطة بحيث يبقى مزيج SLA
+// متوازنًا (على المسار/مستحقة قريبًا/متأخرة قليلة) نحو أسبوعين بعد الزرع —
+// فترة التجربة — بدل أن تنقلب كلها «متأخرة» بعد يوم واحد.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -298,15 +301,16 @@ async function main() {
       description: "سلسلة ثلاثة منشورات لليوم العالمي للاتصالات ومجتمع المعلومات.",
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
       typeName: "تصميم بسيط", priority: "normal", designerEmail: "n.alshahri@cst.gov.sa",
-      ageH: 8, steps: [{ to: "ready", afterH: 2 }],
-      sizes: "1080x1080", channel: "منصات التواصل الاجتماعي", publishDueWorkH: 32,
+      ageH: 3, steps: [{ to: "ready", afterH: 1 }],
+      sizes: "1080x1080", unitCount: 3,
+      channel: "منصات التواصل الاجتماعي", publishDueWorkH: 32,
     }),
     R({
       title: "قالب شهادات الدورات الداخلية",
       description: "قالب شهادة حضور موحد للدورات التدريبية الداخلية.",
       dept: "الموارد البشرية", requesterEmail: "s.aldossari@cst.gov.sa",
       typeName: "تصميم بسيط", priority: "normal", designerEmail: "s.almutairi@cst.gov.sa",
-      ageH: 12, steps: [{ to: "ready", afterH: 3 }],
+      ageH: 4, steps: [{ to: "ready", afterH: 1 }],
       sizes: "A4 أفقي", channel: "مطبوعات", publishDueWorkH: 48,
     }),
     R({
@@ -314,9 +318,9 @@ async function main() {
       description: "شعار فرعي لمبادرة الاستدامة الرقمية ضمن الهوية المؤسسية.",
       dept: "إدارة المشاريع", requesterEmail: "y.alshammari@cst.gov.sa",
       typeName: "تصميم متوسط", priority: "urgent", designerEmail: "m.sobhy@cst.gov.sa",
-      ageH: 6, steps: [{ to: "ready", afterH: 1 }],
+      ageH: 2, steps: [{ to: "ready", afterH: 0.5 }],
       urgentJustification: "إطلاق المبادرة مرتبط بفعالية وزارية مؤكدة الأسبوع القادم.",
-      urgentApprovedAfterH: 1.5,
+      urgentApprovedAfterH: 1,
       sizes: "SVG، PNG شفاف", channel: "هوية", publishDueWorkH: 20,
     }),
     // --- قيد التنفيذ (متأخرة × 2، مستحقة قريبًا، على المسار)
@@ -352,7 +356,7 @@ async function main() {
     }),
     R({
       title: "غلاف تقرير التحول الرقمي",
-      description: "غلاف وتصميم داخلي مختصر لتقرير التحول الرقمي السنوي.",
+      description: "غلاف وتصميم داخلي لتقرير التحول الرقمي السنوي.",
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
       typeName: "تصميم متوسط", priority: "normal", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 24,
@@ -360,9 +364,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      // 8 صفحات بإن ديزاين: (24 + 3×1.5) × 0.9 = 26 ساعة — تبقى «مستحقة قريبًا»
-      sizes: "A4", unitCount: 8,
-      channel: "مطبوعات وPDF", publishDueWorkH: 26,
+      // 20 صفحة: 24 + 15×1.5 ≈ 47 ساعة — مستهلك 23 فتبقى ~3 أيام عمل
+      sizes: "A4", unitCount: 20,
+      channel: "مطبوعات وPDF", publishDueWorkH: 60,
     }),
     R({
       title: "عرض تقديمي لورشة الحوكمة",
@@ -374,9 +378,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      // عرض 30 شريحة: الهدف يتمدد من 16 إلى (16 + 25×1.5) × 1 = 54 ساعة
-      sizes: "1920x1080", unitCount: 30,
-      channel: "عروض تقديمية", publishDueWorkH: 18,
+      // عرض 45 شريحة: الهدف يتمدد من 16 إلى 16 + 40×1.5 = 76 ساعة
+      sizes: "1920x1080", unitCount: 45,
+      channel: "عروض تقديمية", publishDueWorkH: 90,
     }),
     R({
       title: "حملة التوظيف السنوية",
@@ -388,7 +392,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      sizes: "متعددة", channel: "حملة متكاملة", publishDueWorkH: 60,
+      // حملة بـ 45 مخرجًا: 40 + 35×2 = 110 ساعات — على المسار طوال فترة التجربة
+      sizes: "متعددة", unitCount: 45,
+      channel: "حملة متكاملة", publishDueWorkH: 120,
     }),
     R({
       title: "تعديل ألوان مطوية الخدمات",
@@ -432,7 +438,7 @@ async function main() {
     // --- قيد المراجعة الداخلية
     R({
       title: "منشورات حملة الأمن السيبراني",
-      description: "أربعة منشورات توعوية لحملة الأمن السيبراني الوطنية.",
+      description: "حزمة من عشرين مادة توعوية لحملة الأمن السيبراني الوطنية.",
       dept: "تقنية المعلومات", requesterEmail: "a.alsubaie@cst.gov.sa",
       typeName: "تصميم كبير", priority: "high", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 20,
@@ -441,7 +447,9 @@ async function main() {
         { to: "in_progress", afterH: 2 },
         { to: "internal_review", afterH: 16 },
       ],
-      sizes: "1080x1080، 1080x1920", channel: "منصات التواصل الاجتماعي", publishDueWorkH: 36,
+      // 20 مادة: 32 + 10×2 = 52 ساعة — مستهلك 19 فتبقى ~4 أيام عمل
+      sizes: "1080x1080، 1080x1920", unitCount: 20,
+      channel: "منصات التواصل الاجتماعي", publishDueWorkH: 60,
       files: [
         { kind: "deliverable", filename: "مسودة أولية.png", mime: "image/png", version: "v0.1", afterH: 15, by: "designer" },
       ],
@@ -464,11 +472,11 @@ async function main() {
       description: "تحديث القالب الرسمي للعروض التقديمية بالهوية الجديدة.",
       dept: "تقنية المعلومات", requesterEmail: "a.alsubaie@cst.gov.sa",
       typeName: "تصميم بسيط", priority: "normal", designerEmail: "s.almutairi@cst.gov.sa",
-      ageH: 12,
+      ageH: 6,
       steps: [
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
-        { to: "internal_review", afterH: 10 },
+        { to: "internal_review", afterH: 4 },
       ],
       sizes: "1920x1080", channel: "عروض تقديمية", publishDueWorkH: 14,
     }),
@@ -483,7 +491,9 @@ async function main() {
         { to: "in_progress", afterH: 1.5 },
         { to: "internal_review", afterH: 9 },
       ],
-      sizes: "A4 مطوية", channel: "مطبوعات", publishDueWorkH: 56,
+      // 12 صفحة: 40 + 2×2 = 44 ساعة — مستهلك 9 فتبقى ~4 أيام عمل
+      sizes: "A4 مطوية", unitCount: 12,
+      channel: "مطبوعات", publishDueWorkH: 56,
     }),
     // --- بانتظار ملاحظات الجهة (متوقفة) — منها الحالة الذهبية
     R({
