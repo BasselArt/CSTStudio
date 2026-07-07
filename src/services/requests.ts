@@ -551,6 +551,36 @@ export async function transition(
   });
 }
 
+/** الحالة التي أُوقف الطلب منها — من آخر حدث انتقال إلى on_hold */
+export function resumeTargetFor(
+  events: Pick<RequestEventRow, "type" | "data" | "createdAt">[],
+): Status | null {
+  const lastHold = events
+    .filter(
+      (e) => e.type === "status_change" && (e.data as { to?: Status }).to === "on_hold",
+    )
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .at(-1);
+  return (lastHold?.data as { from?: Status } | undefined)?.from ?? null;
+}
+
+/**
+ * استئناف مهمة موقوفة مؤقتًا (لمسؤول الاستوديو): يعيدها للحالة التي
+ * أُوقفت منها — البوابة النهائية transition نفسها (فحص الدور والانتقال).
+ */
+export async function resume(id: number, actor: Actor, note?: string): Promise<void> {
+  const req = await db.query.requests.findFirst({ where: eq(requests.id, id) });
+  if (!req || !canView(actor, req)) throw new NotFoundError();
+  if (req.status !== "on_hold") {
+    throw new ForbiddenError("الطلب ليس موقوفًا مؤقتًا.");
+  }
+  const events = await db.query.requestEvents.findMany({
+    where: eq(requestEvents.requestId, id),
+  });
+  const back = resumeTargetFor(events) ?? "in_progress";
+  await transition(id, back, actor, note);
+}
+
 export async function assign(id: number, designerId: number, actor: Actor): Promise<void> {
   if (actor.role !== "studio_manager") {
     throw new ForbiddenError("الإسناد لمسؤول الاستوديو فقط.");

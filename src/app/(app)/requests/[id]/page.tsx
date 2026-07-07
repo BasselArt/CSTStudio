@@ -34,6 +34,7 @@ import {
   allowedTransitions,
   getRequestDetails,
   NotFoundError,
+  resumeTargetFor,
 } from "@/services/requests";
 import { listDesigners } from "@/services/users";
 import {
@@ -43,6 +44,7 @@ import {
   doComment,
   doDeclineUrgent,
   doRequestInfo,
+  doResume,
   doSubmitDraft,
   doTransition,
   doUploadDeliverable,
@@ -176,6 +178,7 @@ export default async function RequestDetailsPage({
           canUploadDeliverable={canUploadDeliverable && !request.isDraft}
           canUploadInput={canUploadInput && !request.isDraft}
           hasDeliverables={deliverables.length > 0}
+          resumeTo={request.status === "on_hold" ? resumeTargetFor(events) : null}
           allowedExtensions={settingsRow.allowedFileTypes}
           suggestedVersion={`v0.${deliverables.length + 1}`}
           urgentPending={urgentPending}
@@ -184,6 +187,7 @@ export default async function RequestDetailsPage({
           isDraftOwner={request.isDraft && request.requesterId === actor.id}
           actions={{
             doTransition,
+            doResume,
             doCancel,
             doRequestInfo,
             doAssign,

@@ -13,6 +13,8 @@ import {
   Info,
   Lightbulb,
   Link2,
+  PauseCircle,
+  PlayCircle,
   Send,
   Upload,
   UserPlus,
@@ -38,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { transitionActionLabel } from "@/core/constants";
+import { STATUS_META, transitionActionLabel } from "@/core/constants";
 import type { Role, Status } from "@/core/types";
 import type { ActionState } from "@/app/(app)/requests/[id]/actions";
 
@@ -117,11 +119,16 @@ function nextStepHint(
           : "الطلب معتمد لكنه بلا مصمم — عيّن مصممًا الآن ليبدأ التنفيذ.";
       case "internal_review":
         return "التسليم قيد مراجعتك — أعده للتنفيذ للتعديل، أو أرسله للجهة لإبداء الملاحظات، أو سلّمه مباشرة.";
+      case "on_hold":
+        return "المهمة موقوفة مؤقتًا بقرارك وعدّاد SLA متوقف — استأنفها عند زوال سبب الإيقاف لتعود للحالة السابقة.";
       default:
         return null;
     }
   }
   if (role === "designer") {
+    if (status === "on_hold") {
+      return "أوقف مسؤول الاستوديو المهمة مؤقتًا — عدّاد SLA متوقف ولا يُنتظر منك إجراء حتى الاستئناف.";
+    }
     switch (status) {
       case "ready":
         return "الطلب مسند إليك وجاهز — اضغط «بدء التنفيذ» عند الشروع في العمل ليبدأ السجل بعكس تقدمك الفعلي.";
@@ -137,6 +144,8 @@ function nextStepHint(
   }
   if (role === "requester") {
     switch (status) {
+      case "on_hold":
+        return "أوقف الاستوديو المهمة مؤقتًا — سيُستأنف العمل عند زوال السبب، وعدّاد المدة متوقف خلال ذلك.";
       case "needs_info":
         return "الاستوديو بحاجة لبيانات إضافية — أضفها في التعليقات أو أرفق الملفات، ثم اضغط «أُكملت البيانات» ليُستأنف العمل.";
       case "awaiting_feedback":
@@ -177,6 +186,8 @@ export interface RequestActionsProps {
   canUploadDeliverable: boolean;
   canUploadInput: boolean;
   hasDeliverables: boolean;
+  /** الحالة التي سيعود إليها الطلب عند الاستئناف — null إذا لم يكن موقوفًا */
+  resumeTo: Status | null;
   /** امتدادات الملفات المسموحة — من settings.allowedFileTypes */
   allowedExtensions: string[];
   suggestedVersion: string;
@@ -186,6 +197,7 @@ export interface RequestActionsProps {
   isDraftOwner: boolean;
   actions: {
     doTransition: FormAction;
+    doResume: FormAction;
     doCancel: FormAction;
     doRequestInfo: FormAction;
     doAssign: FormAction;
@@ -208,6 +220,7 @@ export function RequestActions({
   canUploadDeliverable,
   canUploadInput,
   hasDeliverables,
+  resumeTo,
   allowedExtensions,
   suggestedVersion,
   urgentPending,
@@ -221,6 +234,7 @@ export function RequestActions({
     {},
   );
   const [draftState, draftAction, draftPending] = useActionState(actions.doSubmitDraft, {});
+  const [resumeState, resumeAction, resumePending] = useActionState(actions.doResume, {});
 
   const accept = allowedExtensions.map((e) => `.${e}`).join(",");
   const extensionsHint = allowedExtensions.map((e) => e.toUpperCase()).join("، ");
@@ -229,10 +243,18 @@ export function RequestActions({
   // الأزرار المخصصة (حوارات) تُستبعد من أزرار الانتقال المباشرة
   const canRequestInfo = transitions.includes("needs_info");
   const canCancel = transitions.includes("cancelled");
-  const noteTransitions = transitions.filter((t) => needsNoteDialog(status, t));
-  const plainTransitions = transitions.filter(
-    (t) => !["needs_info", "cancelled"].includes(t) && !needsNoteDialog(status, t),
-  );
+  const canPause = transitions.includes("on_hold");
+  // عند الإيقاف المؤقت: زر «استئناف» واحد يعيد للحالة السابقة بدل ثلاثة أزرار عودة
+  const isOnHold = status === "on_hold";
+  const canResume = isOnHold && transitions.some((t) => t !== "cancelled");
+  const noteTransitions = isOnHold
+    ? []
+    : transitions.filter((t) => needsNoteDialog(status, t));
+  const plainTransitions = isOnHold
+    ? []
+    : transitions.filter(
+        (t) => !["needs_info", "cancelled", "on_hold"].includes(t) && !needsNoteDialog(status, t),
+      );
   // الزر الأساسي أولًا
   plainTransitions.sort((a, b) =>
     a === PRIMARY_TO[status] ? -1 : b === PRIMARY_TO[status] ? 1 : 0,
@@ -261,6 +283,21 @@ export function RequestActions({
             <Button type="submit" disabled={draftPending} className="gap-2">
               <Send className="size-4 rtl:-scale-x-100" />
               إرسال الطلب
+            </Button>
+          </form>
+        ) : null}
+
+        {canResume ? (
+          <form action={resumeAction}>
+            <input type="hidden" name="requestId" value={requestId} />
+            <Button type="submit" disabled={resumePending} className="gap-2">
+              <PlayCircle className="size-4" />
+              استئناف المهمة
+              {resumeTo ? (
+                <span className="text-xs font-normal opacity-80">
+                  — تعود إلى «{STATUS_META[resumeTo].label}»
+                </span>
+              ) : null}
             </Button>
           </form>
         ) : null}
@@ -380,6 +417,34 @@ export function RequestActions({
           </ActionDialog>
         ) : null}
 
+        {canPause ? (
+          <ActionDialog
+            trigger={
+              <Button variant="outline" className="gap-2">
+                <PauseCircle className="size-4" />
+                {transitionActionLabel(status, "on_hold")}
+              </Button>
+            }
+            title="إيقاف المهمة مؤقتًا"
+            description="يتوقف عدّاد SLA بالكامل حتى الاستئناف، ويعود الطلب حينها إلى حالته الحالية."
+            action={actions.doTransition}
+            requestId={requestId}
+            submitLabel="إيقاف مؤقت"
+          >
+            <input type="hidden" name="to" value="on_hold" />
+            <div className="space-y-2">
+              <Label htmlFor="hold-note">سبب الإيقاف</Label>
+              <Textarea
+                id="hold-note"
+                name="note"
+                rows={2}
+                required
+                placeholder="مثال: بانتظار اعتماد الميزانية / تأجيل الفعالية…"
+              />
+            </div>
+          </ActionDialog>
+        ) : null}
+
         {canRequestInfo ? (
           <ActionDialog
             trigger={
@@ -454,7 +519,7 @@ export function RequestActions({
         ) : null}
       </div>
 
-      <ErrorLine error={transitionState.error ?? draftState.error} />
+      <ErrorLine error={transitionState.error ?? draftState.error ?? resumeState.error} />
 
       {urgentPending ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 bg-danger/5 p-3">

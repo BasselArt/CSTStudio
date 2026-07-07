@@ -541,6 +541,20 @@ async function main() {
       ],
       sizes: "SVG", channel: "رقمي", publishDueWorkH: 12,
     }),
+    // --- موقوفة مؤقتًا بقرار المسؤول (عدّاد SLA متوقف)
+    R({
+      title: "كتيب ملتقى الشركاء السنوي",
+      description: "كتيب تعريفي لملتقى الشركاء — أُجّل الملتقى لحين اعتماد الموعد الجديد.",
+      dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
+      typeName: "تصميم متوسط", priority: "normal", designerEmail: "a.nabil@cst.gov.sa",
+      ageH: 28,
+      steps: [
+        { to: "ready", afterH: 1 },
+        { to: "in_progress", afterH: 2 },
+        { to: "on_hold", afterH: 8, note: "تأجيل الملتقى لحين اعتماد الموعد الجديد من اللجنة — إيقاف مؤقت بقرار المسؤول." },
+      ],
+      sizes: "A5", unitCount: 12, channel: "فعاليات", publishDueWorkH: 80,
+    }),
     // --- تم التسليم
     R({
       title: "شهادة شكر للمتقاعدين",
@@ -917,7 +931,7 @@ async function main() {
       const actorId =
         step.to === "cancelled"
           ? requester.id
-          : step.to === "ready" || step.to === "closed"
+          : step.to === "ready" || step.to === "closed" || step.to === "on_hold"
             ? manager.id
             : (designer?.id ?? manager.id);
       addEvent(

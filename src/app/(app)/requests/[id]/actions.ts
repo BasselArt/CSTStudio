@@ -10,6 +10,7 @@ import { getSettings } from "@/services/settings";
 import {
   addAttachments,
   addComment,
+  resume,
   type AttachmentInput,
   approveUrgent,
   assign,
@@ -53,6 +54,18 @@ export async function doTransition(_prev: ActionState, formData: FormData): Prom
     return { error: message(error) };
   }
   done(parsed.data.requestId);
+}
+
+/** استئناف مهمة موقوفة مؤقتًا — العودة للحالة السابقة للإيقاف */
+export async function doResume(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await requireActor();
+  const requestId = Number(formData.get("requestId"));
+  try {
+    await resume(requestId, actor);
+  } catch (error) {
+    return { error: message(error) };
+  }
+  done(requestId);
 }
 
 export async function doCancel(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -39,7 +39,7 @@ export function SlaProgressCard({ sla }: { sla: DeliverySla }) {
             <span className="text-2xl font-bold text-navy">
               {formatWorkingDuration(sla.pausedH)}
             </span>
-            <span className="text-[10px] text-muted-foreground">بانتظار الجهة</span>
+            <span className="text-[10px] text-muted-foreground">انتظار الجهة أو إيقاف مؤقت</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

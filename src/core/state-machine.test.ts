@@ -39,15 +39,17 @@ describe("آلة الحالات", () => {
     expect(incrementsReviewRound("awaiting_feedback", "delivered")).toBe(false);
   });
 
-  it("المصفوفة الشاملة 9×9 تطابق خريطة الـ SPEC §6 حرفيًا", () => {
-    // المصدر: SPEC §6 — أي انحراف هنا يكسر الاختبار
+  it("المصفوفة الشاملة 10×10 تطابق خريطة SPEC §6 + امتداد «موقوف مؤقتًا» حرفيًا", () => {
+    // المصدر: SPEC §6 + on_hold (إيقاف مؤقت بقرار المسؤول يوقف عدّاد SLA) —
+    // أي انحراف هنا يكسر الاختبار
     const SPEC_MAP: Record<Status, Status[]> = {
       new: ["needs_info", "ready", "cancelled"],
       needs_info: ["ready", "cancelled"],
-      ready: ["in_progress", "needs_info", "cancelled"],
-      in_progress: ["internal_review", "needs_info", "awaiting_feedback", "cancelled"],
-      internal_review: ["in_progress", "awaiting_feedback", "delivered"],
+      ready: ["in_progress", "needs_info", "on_hold", "cancelled"],
+      in_progress: ["internal_review", "needs_info", "awaiting_feedback", "on_hold", "cancelled"],
+      internal_review: ["in_progress", "awaiting_feedback", "delivered", "on_hold"],
       awaiting_feedback: ["in_progress", "delivered", "cancelled"],
+      on_hold: ["ready", "in_progress", "internal_review", "cancelled"],
       delivered: ["closed", "in_progress"],
       closed: [],
       cancelled: [],
@@ -66,7 +68,12 @@ describe("آلة الحالات", () => {
         checked += 1;
       }
     }
-    expect(checked).toBe(81);
+    expect(checked).toBe(100);
+  });
+
+  it("on_hold يوقف عدّاد SLA (slaEffect=paused) والاستئناف لا يرفع جولة المراجعة", () => {
+    expect(incrementsReviewRound("on_hold", "in_progress")).toBe(false);
+    expect(isFinalStatus("on_hold")).toBe(false);
   });
 
   it("رسالة الخطأ تحمل التسميات العربية من constants", () => {

@@ -7,6 +7,7 @@ export type Status =
   | "in_progress"
   | "internal_review"
   | "awaiting_feedback"
+  | "on_hold"
   | "delivered"
   | "closed"
   | "cancelled";

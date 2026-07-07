@@ -3,14 +3,19 @@
 import { STATUS_META } from "./constants";
 import type { Status } from "./types";
 
-/** خريطة الانتقالات المسموحة (SPEC §6) */
+/**
+ * خريطة الانتقالات المسموحة (SPEC §6 + امتداد «موقوف مؤقتًا»):
+ * on_hold إيقاف بقرار مسؤول الاستوديو من أي حالة تشغيل، والاستئناف يعيد
+ * الطلب للحالة التي أُوقف منها (تُشتق من حدث الإيقاف في request_events).
+ */
 export const TRANSITIONS: Record<Status, readonly Status[]> = {
   new: ["needs_info", "ready", "cancelled"],
   needs_info: ["ready", "cancelled"],
-  ready: ["in_progress", "needs_info", "cancelled"],
-  in_progress: ["internal_review", "needs_info", "awaiting_feedback", "cancelled"],
-  internal_review: ["in_progress", "awaiting_feedback", "delivered"],
+  ready: ["in_progress", "needs_info", "on_hold", "cancelled"],
+  in_progress: ["internal_review", "needs_info", "awaiting_feedback", "on_hold", "cancelled"],
+  internal_review: ["in_progress", "awaiting_feedback", "delivered", "on_hold"],
   awaiting_feedback: ["in_progress", "delivered", "cancelled"],
+  on_hold: ["ready", "in_progress", "internal_review", "cancelled"],
   delivered: ["closed", "in_progress"],
   closed: [],
   cancelled: [],
