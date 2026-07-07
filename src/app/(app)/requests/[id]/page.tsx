@@ -167,12 +167,16 @@ export default async function RequestDetailsPage({
         </div>
         <RequestActions
           requestId={request.id}
+          role={actor.role}
+          status={request.status}
           transitions={transitions}
           canAssign={actor.role === "studio_manager" && !request.isDraft}
           designers={designers.map((d) => ({ value: String(d.id), label: d.name }))}
           currentAssigneeId={request.assigneeId}
           canUploadDeliverable={canUploadDeliverable && !request.isDraft}
           canUploadInput={canUploadInput && !request.isDraft}
+          hasDeliverables={deliverables.length > 0}
+          allowedExtensions={settingsRow.allowedFileTypes}
           suggestedVersion={`v0.${deliverables.length + 1}`}
           urgentPending={urgentPending}
           urgentNeedsAgreedH={type.slaUrgentH == null}

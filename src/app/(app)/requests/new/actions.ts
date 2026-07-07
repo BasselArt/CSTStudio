@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireActor } from "@/lib/auth";
 import { saveUpload, FileValidationError } from "@/services/files";
 import { addAttachment, createRequest, saveDraft } from "@/services/requests";
+import { getSettings } from "@/services/settings";
 import { createRequestSchema } from "@/services/schemas";
 
 export interface NewRequestState {
@@ -43,8 +44,9 @@ export async function submitNewRequest(
   let id: number;
   try {
     // التحقق من الملفات قبل إنشاء الطلب (النوع والحجم على الخادم)
+    const settingsRow = await getSettings();
     const saved = [];
-    for (const file of files) saved.push(await saveUpload(file));
+    for (const file of files) saved.push(await saveUpload(file, settingsRow.allowedFileTypes));
 
     id = isDraft
       ? await saveDraft(parsed.data, actor)

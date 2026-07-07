@@ -62,7 +62,9 @@ interface SeedComment {
 interface SeedAttachment {
   kind: "input" | "deliverable";
   filename: string;
-  mime: string;
+  mime?: string;
+  /** رابط خارجي بدل ملف مرفوع (تسليم بالروابط) */
+  url?: string;
   version?: string;
   afterH: number;
   by: "requester" | "designer";
@@ -84,7 +86,7 @@ interface SeedRequest {
   sizes?: string;
   /** حجم الطلب بوحدات النوع — يوسّع هدف SLA */
   unitCount?: number;
-  /** أداة التنفيذ — معاملها يدخل في هدف SLA */
+  /** قناة الاستخدام المعروضة في تفاصيل الطلب */
   channel?: string;
   publishDueWorkH?: number;
   urgentJustification?: string;
@@ -161,6 +163,10 @@ async function main() {
         "بانر ويب 1920x600",
         "بطاقة عمل 85x55mm",
         "SVG / PNG شفاف",
+      ],
+      allowedFileTypes: [
+        "jpg", "jpeg", "png", "gif", "webp", "svg", "pdf", "mp4", "mov",
+        "zip", "rar", "ai", "psd", "eps", "ppt", "pptx", "doc", "docx", "xls", "xlsx",
       ],
     })
     .run();
@@ -506,6 +512,7 @@ async function main() {
         { kind: "deliverable", filename: "المخطط المبدئي.pdf", mime: "application/pdf", version: "v0.1", afterH: 8, by: "designer" },
         { kind: "deliverable", filename: "مسودة أولية.png", mime: "image/png", version: "v0.2", afterH: 12, by: "designer" },
         { kind: "deliverable", filename: "الإنفوغرافيك - الإصدار الأول.pdf", mime: "application/pdf", version: "v1.0", afterH: 17, by: "designer" },
+        { kind: "deliverable", filename: "figma.com", url: "https://www.figma.com/file/annual-report-infographic", version: "v1.0", afterH: 17.2, by: "designer" },
       ],
     }),
     R({
@@ -929,11 +936,19 @@ async function main() {
     }
 
     for (const f of spec.files ?? []) {
-      const buffer = placeholderFile(f.filename);
-      const relPath = path.join("seed", `${counter}-${f.filename}`);
-      fs.writeFileSync(path.join(uploadRoot, relPath), buffer);
       const uploader = f.by === "requester" ? requester : (designer ?? manager);
       const when = at(f.afterH);
+      let fileMeta: { path: string | null; size: number | null; mime: string | null } = {
+        path: null,
+        size: null,
+        mime: null,
+      };
+      if (!f.url) {
+        const buffer = placeholderFile(f.filename);
+        const relPath = path.join("seed", `${counter}-${f.filename}`);
+        fs.writeFileSync(path.join(uploadRoot, relPath), buffer);
+        fileMeta = { path: relPath, size: buffer.length, mime: f.mime ?? null };
+      }
       const [att] = db
         .insert(attachments)
         .values({
@@ -941,9 +956,8 @@ async function main() {
           kind: f.kind,
           version: f.version ?? null,
           filename: f.filename,
-          path: relPath,
-          size: buffer.length,
-          mime: f.mime,
+          url: f.url ?? null,
+          ...fileMeta,
           uploadedById: uploader.id,
           createdAt: iso(when),
         })
@@ -953,6 +967,7 @@ async function main() {
         attachmentId: att.id,
         kind: f.kind,
         filename: f.filename,
+        url: f.url,
         version: f.version ?? null,
       }, when);
       attachmentsCount += 1;

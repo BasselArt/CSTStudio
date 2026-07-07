@@ -6,9 +6,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActor } from "@/lib/auth";
 import { saveUpload, FileValidationError } from "@/services/files";
+import { getSettings } from "@/services/settings";
 import {
-  addAttachment,
+  addAttachments,
   addComment,
+  type AttachmentInput,
   approveUrgent,
   assign,
   cancel,
@@ -23,6 +25,7 @@ import {
   cancelSchema,
   commentSchema,
   declineUrgentSchema,
+  deliverableLinksSchema,
   requestInfoSchema,
   transitionSchema,
 } from "@/services/schemas";
@@ -96,6 +99,16 @@ export async function doComment(formData: FormData): Promise<void> {
   revalidatePath(`/requests/${parsed.data.requestId}`);
 }
 
+/** اسم معروض لرابط تسليم: النطاق بلا www */
+function linkLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.slice(0, 60);
+  }
+}
+
+/** التسليم يقبل ملفات متعددة و/أو روابط متعددة (سطر لكل رابط) في عملية واحدة */
 export async function doUploadDeliverable(
   _prev: ActionState,
   formData: FormData,
@@ -103,11 +116,30 @@ export async function doUploadDeliverable(
   const actor = await requireActor();
   const requestId = Number(formData.get("requestId"));
   const version = String(formData.get("version") || "").trim() || null;
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "اختر ملفًا للرفع." };
+
+  const files = formData
+    .getAll("files")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  const rawLinks = String(formData.get("links") || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const parsedLinks = deliverableLinksSchema.safeParse(rawLinks);
+  if (!parsedLinks.success) return { error: parsedLinks.error.issues[0].message };
+  if (files.length === 0 && parsedLinks.data.length === 0) {
+    return { error: "أضف ملفًا واحدًا أو رابطًا واحدًا على الأقل." };
+  }
+
   try {
-    const meta = await saveUpload(file);
-    await addAttachment(requestId, "deliverable", meta, version, actor);
+    const settingsRow = await getSettings();
+    const inputs: AttachmentInput[] = [];
+    for (const file of files) {
+      inputs.push(await saveUpload(file, settingsRow.allowedFileTypes));
+    }
+    for (const url of parsedLinks.data) {
+      inputs.push({ filename: linkLabel(url), url });
+    }
+    await addAttachments(requestId, "deliverable", inputs, version, actor);
   } catch (error) {
     if (error instanceof FileValidationError) return { error: error.message };
     return { error: message(error) };
@@ -118,11 +150,17 @@ export async function doUploadDeliverable(
 export async function doUploadInput(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireActor();
   const requestId = Number(formData.get("requestId"));
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "اختر ملفًا للرفع." };
+  const files = formData
+    .getAll("files")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return { error: "اختر ملفًا واحدًا على الأقل." };
   try {
-    const meta = await saveUpload(file);
-    await addAttachment(requestId, "input", meta, null, actor);
+    const settingsRow = await getSettings();
+    const inputs: AttachmentInput[] = [];
+    for (const file of files) {
+      inputs.push(await saveUpload(file, settingsRow.allowedFileTypes));
+    }
+    await addAttachments(requestId, "input", inputs, null, actor);
   } catch (error) {
     if (error instanceof FileValidationError) return { error: error.message };
     return { error: message(error) };

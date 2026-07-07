@@ -2,14 +2,17 @@
 
 // أزرار إجراءات تفاصيل الطلب — تُشتق من الدور × الانتقالات المتاحة فعلًا
 // في state-machine (تصل جاهزة من الخادم عبر allowedTransitions) — SPEC §12/04.
+// كل انتقال زر صريح بتسمية CTA من core/constants + شريط «الخطوة التالية»
+// الذي يوجّه كل دور لما يُنتظر منه الآن.
 
 import { useActionState } from "react";
 import {
   AlertTriangle,
   Ban,
   CheckCircle2,
-  ChevronDown,
   Info,
+  Lightbulb,
+  Link2,
   Send,
   Upload,
   UserPlus,
@@ -25,12 +28,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -41,8 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { STATUS_META } from "@/core/constants";
-import type { Status } from "@/core/types";
+import { transitionActionLabel } from "@/core/constants";
+import type { Role, Status } from "@/core/types";
 import type { ActionState } from "@/app/(app)/requests/[id]/actions";
 
 type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -99,14 +96,89 @@ function ActionDialog({
   );
 }
 
+/**
+ * إرشاد «الخطوة التالية» حسب الدور والحالة — يجعل الإجراء المنتظر واضحًا
+ * بدل ترك المستخدم يخمّن متى يغيّر حالة الطلب.
+ */
+function nextStepHint(
+  role: Role,
+  status: Status,
+  opts: { assigned: boolean; hasDeliverables: boolean },
+): string | null {
+  if (role === "studio_manager") {
+    switch (status) {
+      case "new":
+        return opts.assigned
+          ? "طلب جديد — راجع البيانات ثم اعتمده «جاهز للتنفيذ»، أو اطلب استكمال البيانات إن كانت ناقصة."
+          : "طلب جديد — عيّن مصممًا ثم اعتمده «جاهز للتنفيذ»، أو اطلب استكمال البيانات إن كانت ناقصة.";
+      case "ready":
+        return opts.assigned
+          ? null // الدور الآن على المصمم
+          : "الطلب معتمد لكنه بلا مصمم — عيّن مصممًا الآن ليبدأ التنفيذ.";
+      case "internal_review":
+        return "التسليم قيد مراجعتك — أعده للتنفيذ للتعديل، أو أرسله للجهة لإبداء الملاحظات، أو سلّمه مباشرة.";
+      default:
+        return null;
+    }
+  }
+  if (role === "designer") {
+    switch (status) {
+      case "ready":
+        return "الطلب مسند إليك وجاهز — اضغط «بدء التنفيذ» عند الشروع في العمل ليبدأ السجل بعكس تقدمك الفعلي.";
+      case "in_progress":
+        return opts.hasDeliverables
+          ? "رفعت تسليمًا — أرسل الطلب للمراجعة الداخلية أو للجهة لإبداء الملاحظات حتى لا يبقى معلقًا عليك."
+          : "أنت تعمل على الطلب — عند اكتمال المسودة ارفع التسليم (ملفات أو روابط) ثم أرسله للمراجعة الداخلية.";
+      case "internal_review":
+        return "التسليم قيد المراجعة الداخلية — بعد اعتماده أرسله للجهة أو سلّمه، وإن طُلبت تعديلات أعده للتنفيذ.";
+      default:
+        return null;
+    }
+  }
+  if (role === "requester") {
+    switch (status) {
+      case "needs_info":
+        return "الاستوديو بحاجة لبيانات إضافية — أضفها في التعليقات أو أرفق الملفات، ثم اضغط «أُكملت البيانات» ليُستأنف العمل.";
+      case "awaiting_feedback":
+        return "التسليمات بانتظار ملاحظاتك — راجعها ثم أعد الطلب للتنفيذ مع ملاحظاتك، أو اعتمده بالضغط على «تسليم الطلب».";
+      case "delivered":
+        return "تم التسليم — راجع المخرجات النهائية واعتمد الإغلاق، أو أعد الطلب للتنفيذ بملاحظات. يُغلق الطلب تلقائيًا بعد مدة محددة.";
+      default:
+        return null;
+    }
+  }
+  return null;
+}
+
+/** الانتقال الأنسب كخطوة تالية من كل حالة — يُعرض زرًا أساسيًا (solid) */
+const PRIMARY_TO: Partial<Record<Status, Status>> = {
+  new: "ready",
+  needs_info: "ready",
+  ready: "in_progress",
+  in_progress: "internal_review",
+  internal_review: "awaiting_feedback",
+  awaiting_feedback: "delivered",
+  delivered: "closed",
+};
+
+/** الانتقالات التي تُطلب معها ملاحظة اختيارية (إعادة للتنفيذ بملاحظات) */
+function needsNoteDialog(from: Status, to: Status): boolean {
+  return to === "in_progress" && ["internal_review", "awaiting_feedback", "delivered"].includes(from);
+}
+
 export interface RequestActionsProps {
   requestId: number;
+  role: Role;
+  status: Status;
   transitions: Status[];
   canAssign: boolean;
   designers: { value: string; label: string }[];
   currentAssigneeId: number | null;
   canUploadDeliverable: boolean;
   canUploadInput: boolean;
+  hasDeliverables: boolean;
+  /** امتدادات الملفات المسموحة — من settings.allowedFileTypes */
+  allowedExtensions: string[];
   suggestedVersion: string;
   urgentPending: boolean;
   urgentNeedsAgreedH: boolean;
@@ -127,12 +199,16 @@ export interface RequestActionsProps {
 
 export function RequestActions({
   requestId,
+  role,
+  status,
   transitions,
   canAssign,
   designers,
   currentAssigneeId,
   canUploadDeliverable,
   canUploadInput,
+  hasDeliverables,
+  allowedExtensions,
   suggestedVersion,
   urgentPending,
   urgentNeedsAgreedH,
@@ -146,15 +222,38 @@ export function RequestActions({
   );
   const [draftState, draftAction, draftPending] = useActionState(actions.doSubmitDraft, {});
 
-  // أزرار مخصصة لها حوارات — تُستبعد من قائمة «تغيير الحالة»
-  const dedicated: Status[] = ["needs_info", "cancelled", "delivered"];
-  const dropdownTransitions = transitions.filter((t) => !dedicated.includes(t));
-  const canDeliver = transitions.includes("delivered");
+  const accept = allowedExtensions.map((e) => `.${e}`).join(",");
+  const extensionsHint = allowedExtensions.map((e) => e.toUpperCase()).join("، ");
+  const uploadDescription = `الأنواع المسموحة: ${extensionsHint} — بحد أقصى 50MB للملف.`;
+
+  // الأزرار المخصصة (حوارات) تُستبعد من أزرار الانتقال المباشرة
   const canRequestInfo = transitions.includes("needs_info");
   const canCancel = transitions.includes("cancelled");
+  const noteTransitions = transitions.filter((t) => needsNoteDialog(status, t));
+  const plainTransitions = transitions.filter(
+    (t) => !["needs_info", "cancelled"].includes(t) && !needsNoteDialog(status, t),
+  );
+  // الزر الأساسي أولًا
+  plainTransitions.sort((a, b) =>
+    a === PRIMARY_TO[status] ? -1 : b === PRIMARY_TO[status] ? 1 : 0,
+  );
+
+  const hint = isDraftOwner
+    ? "الطلب مسودة لم تُرسل بعد — أكمل بياناته ثم اضغط «إرسال الطلب» ليصل للاستوديو."
+    : nextStepHint(role, status, { assigned: currentAssigneeId != null, hasDeliverables });
 
   return (
     <div className="flex flex-col gap-2">
+      {hint ? (
+        <div className="flex items-start gap-2 rounded-lg border border-navy/15 bg-navy/5 p-3 text-sm text-navy">
+          <Lightbulb className="mt-0.5 size-4 shrink-0" />
+          <p>
+            <span className="font-bold">الخطوة التالية: </span>
+            {hint}
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2">
         {isDraftOwner ? (
           <form action={draftAction}>
@@ -166,45 +265,59 @@ export function RequestActions({
           </form>
         ) : null}
 
-        {dropdownTransitions.length > 0 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="gap-2" disabled={transitionPending}>
-                تغيير الحالة
-                <ChevronDown className="size-4" />
+        {plainTransitions.map((to) => {
+          const isPrimary = PRIMARY_TO[status] === to;
+          const isDeliver = to === "delivered";
+          return (
+            <form key={to} action={transitionAction}>
+              <input type="hidden" name="requestId" value={requestId} />
+              <input type="hidden" name="to" value={to} />
+              <Button
+                type="submit"
+                disabled={transitionPending}
+                variant={isPrimary ? "default" : "outline"}
+                className={
+                  isDeliver && !isPrimary
+                    ? "gap-2 border-success/40 text-success hover:bg-success/10 hover:text-success"
+                    : isDeliver
+                      ? "gap-2 bg-success text-white hover:bg-success/90"
+                      : "gap-2"
+                }
+              >
+                {isDeliver ? <CheckCircle2 className="size-4" /> : null}
+                {transitionActionLabel(status, to)}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {dropdownTransitions.map((to) => (
-                <DropdownMenuItem key={to} asChild>
-                  <form action={transitionAction} className="w-full">
-                    <input type="hidden" name="requestId" value={requestId} />
-                    <input type="hidden" name="to" value={to} />
-                    <button type="submit" className="w-full text-start">
-                      {STATUS_META[to].label}
-                    </button>
-                  </form>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+            </form>
+          );
+        })}
 
-        {canDeliver ? (
-          <form action={transitionAction}>
-            <input type="hidden" name="requestId" value={requestId} />
-            <input type="hidden" name="to" value="delivered" />
-            <Button
-              type="submit"
-              variant="outline"
-              disabled={transitionPending}
-              className="gap-2 border-success/40 text-success hover:bg-success/10 hover:text-success"
-            >
-              <CheckCircle2 className="size-4" />
-              تسليم الطلب
-            </Button>
-          </form>
-        ) : null}
+        {noteTransitions.map((to) => (
+          <ActionDialog
+            key={to}
+            trigger={
+              <Button variant="outline" className="gap-2">
+                <XCircle className="size-4" />
+                {transitionActionLabel(status, to)}
+              </Button>
+            }
+            title={transitionActionLabel(status, to)}
+            description="اكتب الملاحظات المطلوب معالجتها — تظهر في سجل الطلب ويُشعر بها المصمم."
+            action={actions.doTransition}
+            requestId={requestId}
+            submitLabel="إرسال"
+          >
+            <input type="hidden" name="to" value={to} />
+            <div className="space-y-2">
+              <Label htmlFor={`note-${to}`}>الملاحظات</Label>
+              <Textarea
+                id={`note-${to}`}
+                name="note"
+                rows={3}
+                placeholder="وضّح التعديلات المطلوبة…"
+              />
+            </div>
+          </ActionDialog>
+        ))}
 
         {canUploadDeliverable ? (
           <ActionDialog
@@ -215,14 +328,29 @@ export function RequestActions({
               </Button>
             }
             title="رفع تسليم"
-            description="JPG, PNG, PDF, MP4, ZIP — بحد أقصى 50MB"
+            description="ارفع ملفًا أو أكثر، أو ألصق روابط التصاميم (Figma، Drive، …) — أو الاثنين معًا."
             action={actions.doUploadDeliverable}
             requestId={requestId}
-            submitLabel="رفع"
+            submitLabel="إضافة التسليم"
           >
             <div className="space-y-2">
-              <Label htmlFor="deliverable-file">الملف</Label>
-              <Input id="deliverable-file" type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.mp4,.zip" required />
+              <Label htmlFor="deliverable-files">الملفات (يمكن اختيار أكثر من ملف)</Label>
+              <Input id="deliverable-files" type="file" name="files" accept={accept} multiple />
+              <p className="text-[10px] text-muted-foreground">{uploadDescription}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deliverable-links" className="flex items-center gap-1.5">
+                <Link2 className="size-3.5" />
+                روابط التصاميم
+              </Label>
+              <Textarea
+                id="deliverable-links"
+                name="links"
+                rows={3}
+                dir="ltr"
+                placeholder={"https://www.figma.com/file/…\nhttps://drive.google.com/…"}
+              />
+              <p className="text-[10px] text-muted-foreground">رابط واحد في كل سطر.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="deliverable-version">الإصدار</Label>
@@ -239,15 +367,15 @@ export function RequestActions({
                 إرفاق ملف
               </Button>
             }
-            title="إرفاق ملف للطلب"
-            description="JPG, PNG, PDF, MP4, ZIP — بحد أقصى 50MB"
+            title="إرفاق ملفات للطلب"
+            description={uploadDescription}
             action={actions.doUploadInput}
             requestId={requestId}
             submitLabel="رفع"
           >
             <div className="space-y-2">
-              <Label htmlFor="input-file">الملف</Label>
-              <Input id="input-file" type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.mp4,.zip" required />
+              <Label htmlFor="input-files">الملفات (يمكن اختيار أكثر من ملف)</Label>
+              <Input id="input-files" type="file" name="files" accept={accept} multiple required />
             </div>
           </ActionDialog>
         ) : null}

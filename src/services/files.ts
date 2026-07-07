@@ -8,15 +8,56 @@ import type { AttachmentInput } from "./requests";
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (SPEC §12/03)
 
-/** الأنواع المسموحة: JPG/PNG/PDF/MP4/ZIP (SPEC §12/03) */
-const ALLOWED_EXTENSIONS: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".pdf": "application/pdf",
-  ".mp4": "video/mp4",
-  ".zip": "application/zip",
+/**
+ * خريطة امتداد ← MIME للأنواع الشائعة في عمل الاستوديو.
+ * الأنواع المسموحة فعليًا تأتي من settings.allowedFileTypes (تُدار من
+ * صفحة الإعدادات) — وأي امتداد مسموح خارج الخريطة يُخدَّم كـ octet-stream.
+ */
+const EXTENSION_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  svg: "image/svg+xml",
+  tiff: "image/tiff",
+  pdf: "application/pdf",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  zip: "application/zip",
+  rar: "application/vnd.rar",
+  "7z": "application/x-7z-compressed",
+  ai: "application/postscript",
+  eps: "application/postscript",
+  psd: "image/vnd.adobe.photoshop",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  csv: "text/csv",
+  txt: "text/plain",
+  ttf: "font/ttf",
+  otf: "font/otf",
 };
+
+/** تطبيع امتداد مُدخل من المستخدم: بلا نقطة وبأحرف صغيرة */
+export function normalizeExtension(value: string): string {
+  return value.trim().toLowerCase().replace(/^\.+/, "");
+}
+
+/** قيمة accept لحقل <input type="file"> من قائمة الامتدادات */
+export function acceptAttr(extensions: string[]): string {
+  return extensions.map((e) => `.${e}`).join(",");
+}
+
+/** نص «الأنواع المسموحة» المعروض للمستخدم */
+export function extensionsHint(extensions: string[]): string {
+  return extensions.map((e) => e.toUpperCase()).join("، ");
+}
 
 export class FileValidationError extends Error {
   constructor(message: string) {
@@ -30,14 +71,17 @@ function uploadsRoot(): string {
 }
 
 /** يتحقق من النوع والحجم على الخادم ثم يكتب الملف ويعيد بياناته الوصفية */
-export async function saveUpload(file: File): Promise<AttachmentInput> {
-  const ext = path.extname(file.name).toLowerCase();
-  const mime = ALLOWED_EXTENSIONS[ext];
-  if (!mime) {
+export async function saveUpload(
+  file: File,
+  allowedExtensions: string[],
+): Promise<AttachmentInput> {
+  const ext = normalizeExtension(path.extname(file.name));
+  if (!ext || !allowedExtensions.includes(ext)) {
     throw new FileValidationError(
-      `نوع الملف «${file.name}» غير مسموح — الأنواع المسموحة: JPG, PNG, PDF, MP4, ZIP.`,
+      `نوع الملف «${file.name}» غير مسموح — الأنواع المسموحة: ${extensionsHint(allowedExtensions)}. يمكن للمسؤول إضافة أنواع جديدة من صفحة الإعدادات.`,
     );
   }
+  const mime = EXTENSION_MIME[ext] ?? "application/octet-stream";
   if (file.size > MAX_FILE_SIZE) {
     throw new FileValidationError(`حجم «${file.name}» يتجاوز الحد الأقصى 50MB.`);
   }

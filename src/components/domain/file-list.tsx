@@ -1,6 +1,16 @@
 // قائمة الملفات المشتركة: مرفقات الطلب (input) والتسليمات (deliverable) — SPEC §12/04.
+// الصف إما ملف مرفوع (path/size/mime) أو رابط خارجي (url) من تسليم المصمم.
 
-import { Download, FileArchive, FileImage, FileText, FileVideo, File } from "lucide-react";
+import {
+  Download,
+  ExternalLink,
+  FileArchive,
+  FileImage,
+  FileText,
+  FileVideo,
+  File,
+  Link2,
+} from "lucide-react";
 import { DataTable, type DataColumn } from "@/components/domain/data-table";
 import { formatBytes, formatDateTime } from "@/lib/format";
 
@@ -8,18 +18,21 @@ export interface FileRow {
   id: number;
   filename: string;
   version: string | null;
-  size: number;
-  mime: string;
+  size: number | null;
+  mime: string | null;
+  url: string | null;
   uploaderName: string;
   createdAt: string;
 }
 
-function FileIcon({ mime }: { mime: string }) {
+function FileIcon({ mime, isLink }: { mime: string | null; isLink: boolean }) {
   const cls = "size-4";
-  if (mime.startsWith("image/")) return <FileImage className={`${cls} text-info`} />;
-  if (mime.startsWith("video/")) return <FileVideo className={`${cls} text-progress`} />;
+  if (isLink) return <Link2 className={`${cls} text-info`} />;
+  if (mime?.startsWith("image/")) return <FileImage className={`${cls} text-info`} />;
+  if (mime?.startsWith("video/")) return <FileVideo className={`${cls} text-progress`} />;
   if (mime === "application/pdf") return <FileText className={`${cls} text-danger`} />;
-  if (mime.includes("zip")) return <FileArchive className={`${cls} text-warning`} />;
+  if (mime?.includes("zip") || mime?.includes("rar") || mime?.includes("7z"))
+    return <FileArchive className={`${cls} text-warning`} />;
   return <File className={`${cls} text-muted-foreground`} />;
 }
 
@@ -43,29 +56,56 @@ export function FileList({ files, withVersion }: { files: FileRow[]; withVersion
       : []),
     {
       key: "filename",
-      header: "اسم الملف",
+      header: "الملف / الرابط",
       cell: (f) => (
-        <span className="flex items-center gap-2">
-          <FileIcon mime={f.mime} />
-          {f.filename}
+        <span className="flex items-center gap-2" title={f.url ?? undefined}>
+          <FileIcon mime={f.mime} isLink={!!f.url} />
+          {f.url ? (
+            <a
+              href={f.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="max-w-64 truncate text-info hover:underline"
+              dir="ltr"
+            >
+              {f.filename}
+            </a>
+          ) : (
+            f.filename
+          )}
         </span>
       ),
     },
-    { key: "date", header: "تاريخ الرفع", cell: (f) => formatDateTime(f.createdAt) },
-    { key: "by", header: "رفع بواسطة", cell: (f) => f.uploaderName },
-    { key: "size", header: "الحجم", cell: (f) => <span dir="ltr">{formatBytes(f.size)}</span> },
+    { key: "date", header: "تاريخ الإضافة", cell: (f) => formatDateTime(f.createdAt) },
+    { key: "by", header: "أضيف بواسطة", cell: (f) => f.uploaderName },
+    {
+      key: "size",
+      header: "الحجم",
+      cell: (f) => (f.size != null ? <span dir="ltr">{formatBytes(f.size)}</span> : "—"),
+    },
     {
       key: "actions",
       header: "إجراءات",
-      cell: (f) => (
-        <a
-          href={`/api/files/${f.id}`}
-          className="inline-flex items-center gap-1 rounded-lg border p-1.5 text-muted-foreground hover:bg-muted hover:text-navy"
-          aria-label={`تنزيل ${f.filename}`}
-        >
-          <Download className="size-4" />
-        </a>
-      ),
+      cell: (f) =>
+        f.url ? (
+          <a
+            href={f.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-lg border p-1.5 text-muted-foreground hover:bg-muted hover:text-navy"
+            aria-label={`فتح الرابط ${f.filename}`}
+          >
+            <ExternalLink className="size-4" />
+          </a>
+        ) : (
+          <a
+            href={`/api/files/${f.id}`}
+            className="inline-flex items-center gap-1 rounded-lg border p-1.5 text-muted-foreground hover:bg-muted hover:text-navy"
+            aria-label={`تنزيل ${f.filename}`}
+          >
+            <Download className="size-4" />
+          </a>
+        ),
     },
   ];
 
