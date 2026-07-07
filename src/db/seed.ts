@@ -364,9 +364,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      // 20 صفحة: 24 + 15×1.5 ≈ 47 ساعة — مستهلك 23 فتبقى ~3 أيام عمل
-      sizes: "A4", unitCount: 20,
-      channel: "مطبوعات وPDF", publishDueWorkH: 60,
+      // 60 صفحة: 24 + 55×1.5 ≈ 107 ساعات — مستهلك 23 فتبقى ~10 أيام عمل
+      sizes: "A4", unitCount: 60,
+      channel: "مطبوعات وPDF", publishDueWorkH: 115,
     }),
     R({
       title: "عرض تقديمي لورشة الحوكمة",
@@ -378,9 +378,9 @@ async function main() {
         { to: "ready", afterH: 1 },
         { to: "in_progress", afterH: 2 },
       ],
-      // عرض 45 شريحة: الهدف يتمدد من 16 إلى 16 + 40×1.5 = 76 ساعة
-      sizes: "1920x1080", unitCount: 45,
-      channel: "عروض تقديمية", publishDueWorkH: 90,
+      // عرض 60 شريحة: الهدف يتمدد من 16 إلى 16 + 55×1.5 ≈ 99 ساعة
+      sizes: "1920x1080", unitCount: 60,
+      channel: "عروض تقديمية", publishDueWorkH: 110,
     }),
     R({
       title: "حملة التوظيف السنوية",
@@ -438,7 +438,7 @@ async function main() {
     // --- قيد المراجعة الداخلية
     R({
       title: "منشورات حملة الأمن السيبراني",
-      description: "حزمة من عشرين مادة توعوية لحملة الأمن السيبراني الوطنية.",
+      description: "حزمة من خمسين مادة توعوية لحملة الأمن السيبراني الوطنية.",
       dept: "تقنية المعلومات", requesterEmail: "a.alsubaie@cst.gov.sa",
       typeName: "تصميم كبير", priority: "high", designerEmail: "m.sobhy@cst.gov.sa",
       ageH: 20,
@@ -447,9 +447,9 @@ async function main() {
         { to: "in_progress", afterH: 2 },
         { to: "internal_review", afterH: 16 },
       ],
-      // 20 مادة: 32 + 10×2 = 52 ساعة — مستهلك 19 فتبقى ~4 أيام عمل
-      sizes: "1080x1080، 1080x1920", unitCount: 20,
-      channel: "منصات التواصل الاجتماعي", publishDueWorkH: 60,
+      // 50 مادة: 32 + 40×2 = 112 ساعة — مستهلك 19 فتبقى ~11 يوم عمل
+      sizes: "1080x1080، 1080x1920", unitCount: 50,
+      channel: "منصات التواصل الاجتماعي", publishDueWorkH: 100,
       files: [
         { kind: "deliverable", filename: "مسودة أولية.png", mime: "image/png", version: "v0.1", afterH: 15, by: "designer" },
       ],
@@ -481,8 +481,8 @@ async function main() {
       sizes: "1920x1080", channel: "عروض تقديمية", publishDueWorkH: 14,
     }),
     R({
-      title: "مطوية خدمات الهيئة",
-      description: "مطوية شاملة بخدمات الهيئة للجمهور — طباعة ونسخة رقمية.",
+      title: "كتيب خدمات الهيئة",
+      description: "كتيب شامل بخدمات الهيئة للجمهور — طباعة ونسخة رقمية.",
       dept: "الاتصال المؤسسي", requesterEmail: "m.alqahtani@cst.gov.sa",
       typeName: "تصميم كبير", priority: "normal", designerEmail: "a.alsaeed@cst.gov.sa",
       ageH: 10,
@@ -491,9 +491,9 @@ async function main() {
         { to: "in_progress", afterH: 1.5 },
         { to: "internal_review", afterH: 9 },
       ],
-      // 12 صفحة: 40 + 2×2 = 44 ساعة — مستهلك 9 فتبقى ~4 أيام عمل
-      sizes: "A4 مطوية", unitCount: 12,
-      channel: "مطبوعات", publishDueWorkH: 56,
+      // 30 صفحة: 40 + 20×2 = 80 ساعة — مستهلك 9 فتبقى ~9 أيام عمل
+      sizes: "A4", unitCount: 30,
+      channel: "مطبوعات", publishDueWorkH: 90,
     }),
     // --- بانتظار ملاحظات الجهة (متوقفة) — منها الحالة الذهبية
     R({
