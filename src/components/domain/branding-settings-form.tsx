@@ -16,6 +16,7 @@ interface BrandingValues {
   hasLogo: boolean;
   channels: string[];
   sizeOptions: string[];
+  allowedFileTypes: string[];
 }
 
 /** قائمة وسوم قابلة للتحرير (قنوات/مقاسات) — تُرسل كحقول مخفية متعددة القيم */
@@ -100,6 +101,7 @@ export function BrandingSettingsForm({
   const [state, formAction, pending] = useActionState(action, {});
   const [channels, setChannels] = useState<string[]>(branding.channels);
   const [sizeOptions, setSizeOptions] = useState<string[]>(branding.sizeOptions);
+  const [fileTypes, setFileTypes] = useState<string[]>(branding.allowedFileTypes);
   const [logoPreview, setLogoPreview] = useState<string | null>(
     branding.hasLogo ? "/api/branding/logo" : null,
   );
@@ -201,6 +203,20 @@ export function BrandingSettingsForm({
             onChange={setSizeOptions}
             ltr
           />
+          <div className="space-y-1">
+            <TagListField
+              label="أنواع الملفات المسموح رفعها (المرفقات والتسليمات)"
+              name="allowedFileTypes"
+              placeholder="امتداد جديد — مثل psd"
+              items={fileTypes}
+              onChange={setFileTypes}
+              ltr
+            />
+            <p className="text-[10px] text-muted-foreground">
+              اكتب الامتداد بلا نقطة (مثل png أو indd) — تنطبق القائمة فورًا على نموذج
+              الطلب الجديد وحوارات الرفع والتسليم.
+            </p>
+          </div>
 
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={pending} className="gap-2">

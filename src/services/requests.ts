@@ -604,20 +604,26 @@ export async function addComment(id: number, body: string, actor: Actor): Promis
   });
 }
 
+/** مرفق ملف مرفوع (path/size/mime) أو رابط خارجي (url) — أحدهما إلزامي */
 export interface AttachmentInput {
   filename: string;
-  path: string;
-  size: number;
-  mime: string;
+  path?: string | null;
+  size?: number | null;
+  mime?: string | null;
+  url?: string | null;
 }
 
-export async function addAttachment(
+export async function addAttachments(
   id: number,
   kind: "input" | "deliverable",
-  file: AttachmentInput,
+  files: AttachmentInput[],
   version: string | null,
   actor: Actor,
 ): Promise<void> {
+  if (files.length === 0) return;
+  if (files.some((f) => !f.path && !f.url)) {
+    throw new Error("المرفق يجب أن يكون ملفًا أو رابطًا.");
+  }
   const managerIds = await getStudioManagerIds();
   await db.transaction((tx) => {
     const req = loadRequestOrThrow(tx, id, actor);
@@ -630,36 +636,50 @@ export async function addAttachment(
       throw new ForbiddenError();
     }
     const ts = nowIso();
-    const [created] = tx
-      .insert(attachments)
-      .values({
-        requestId: id,
+    for (const file of files) {
+      const [created] = tx
+        .insert(attachments)
+        .values({
+          requestId: id,
+          kind,
+          version,
+          filename: file.filename,
+          path: file.path ?? null,
+          url: file.url ?? null,
+          size: file.size ?? null,
+          mime: file.mime ?? null,
+          uploadedById: actor.id,
+          createdAt: ts,
+        })
+        .returning({ id: attachments.id })
+        .all();
+      addEvent(tx, id, "attachment", actor.id, {
+        attachmentId: created.id,
         kind,
-        version,
         filename: file.filename,
-        path: file.path,
-        size: file.size,
-        mime: file.mime,
-        uploadedById: actor.id,
-        createdAt: ts,
-      })
-      .returning({ id: attachments.id })
-      .all();
-    addEvent(tx, id, "attachment", actor.id, {
-      attachmentId: created.id,
-      kind,
-      filename: file.filename,
-      version,
-    }, ts);
+        url: file.url ?? undefined,
+        version,
+      }, ts);
+    }
     tx.update(requests).set({ updatedAt: ts }).where(eq(requests.id, id)).run();
     if (kind === "deliverable") {
       notifyCounterpart(tx, req, actor, managerIds, {
         type: "deliverable",
         title: `تسليم جديد على الطلب ${req.number}`,
-        body: file.filename,
+        body: files.map((f) => f.filename).join("، ").slice(0, 120),
       });
     }
   });
+}
+
+export async function addAttachment(
+  id: number,
+  kind: "input" | "deliverable",
+  file: AttachmentInput,
+  version: string | null,
+  actor: Actor,
+): Promise<void> {
+  await addAttachments(id, kind, [file], version, actor);
 }
 
 export async function approveUrgent(

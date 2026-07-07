@@ -25,6 +25,7 @@ export default async function SettingsPage() {
           hasLogo: !!settingsRow.logoPath,
           channels: settingsRow.channels,
           sizeOptions: settingsRow.sizeOptions,
+          allowedFileTypes: settingsRow.allowedFileTypes,
         }}
         action={saveBrandingSettings}
       />

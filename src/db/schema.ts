@@ -108,9 +108,12 @@ export const attachments = sqliteTable("attachments", {
   kind: text("kind").$type<"input" | "deliverable">().notNull(),
   version: text("version"),
   filename: text("filename").notNull(),
-  path: text("path").notNull(),
-  size: integer("size").notNull(),
-  mime: text("mime").notNull(),
+  /** مسار الملف داخل storage/uploads — null إذا كان التسليم رابطًا خارجيًا */
+  path: text("path"),
+  /** رابط خارجي للتصميم (Figma/Drive/…) — null إذا كان التسليم ملفًا مرفوعًا */
+  url: text("url"),
+  size: integer("size"),
+  mime: text("mime"),
   uploadedById: integer("uploaded_by_id")
     .notNull()
     .references(() => users.id),
@@ -155,6 +158,11 @@ export const settings = sqliteTable("settings", {
   channels: text("channels", { mode: "json" }).$type<string[]>().notNull().default([]),
   /** قائمة المقاسات المتاحة في نموذج الطلب — تُدار من صفحة الإعدادات */
   sizeOptions: text("size_options", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** امتدادات الملفات المسموح رفعها (بلا نقطة) — تُدار من صفحة الإعدادات */
+  allowedFileTypes: text("allowed_file_types", { mode: "json" })
+    .$type<string[]>()
+    .notNull()
+    .default(["jpg", "jpeg", "png", "gif", "webp", "svg", "pdf", "mp4", "mov", "zip", "rar", "ai", "psd", "eps", "ppt", "pptx", "doc", "docx", "xls", "xlsx"]),
 });
 
 /** عدّاد الترقيم السنوي — يُحدَّث داخل transaction لمنع التسابق (SPEC §5) */

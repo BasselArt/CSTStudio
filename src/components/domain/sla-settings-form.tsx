@@ -26,8 +26,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PRIORITY_META, WORK_DAY_HOURS } from "@/core/constants";
-import { formatDate, formatNumber } from "@/lib/format";
+import { PRIORITIES, PRIORITY_META, WORK_DAY_HOURS } from "@/core/constants";
+import { slaTargetHours } from "@/core/sla";
+import type { Priority } from "@/core/types";
+import { formatDate, formatNumber, formatWorkingDuration } from "@/lib/format";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { SettingsState } from "@/app/(app)/settings/actions";
 
 const DAY_NAMES = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -58,6 +67,92 @@ interface SettingsValues {
   loadLowPct: number;
   loadHighPct: number;
   responseSlaH: number;
+}
+
+/**
+ * حاسبة تفاعلية توضح معادلة الهدف على القيم المحفوظة:
+ * الهدف = أساس (النوع × الأولوية) + الوحدات فوق الحجم الأساسي × ساعات/وحدة.
+ */
+function SlaCalculator({ types }: { types: TypeRow[] }) {
+  const [typeId, setTypeId] = useState(types[0] ? String(types[0].id) : "");
+  const [priority, setPriority] = useState<Priority>("normal");
+  const [units, setUnits] = useState("");
+
+  const type = types.find((t) => String(t.id) === typeId) ?? null;
+  const unitCount = units ? Number(units) : null;
+  const targetH = type ? slaTargetHours(type, priority, true, { unitCount }) : null;
+  const baseH = type ? slaTargetHours(type, priority, true) : null;
+  const extraH = targetH != null && baseH != null ? targetH - baseH : 0;
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
+      <p className="text-xs font-medium">جرّب الحساب (وفق القيم المحفوظة):</p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">النوع</Label>
+          <Select value={typeId} onValueChange={setTypeId}>
+            <SelectTrigger className="w-44" size="sm">
+              <SelectValue placeholder="اختر نوعًا" />
+            </SelectTrigger>
+            <SelectContent>
+              {types.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">الأولوية</Label>
+          <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+            <SelectTrigger className="w-28" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITIES.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PRIORITY_META[p].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {type?.unitLabel ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="calc-units" className="text-xs">
+              عدد {type.unitLabel}
+            </Label>
+            <Input
+              id="calc-units"
+              type="number"
+              min={1}
+              max={1000}
+              dir="ltr"
+              className="h-8 w-24"
+              value={units}
+              onChange={(e) => setUnits(e.target.value)}
+              placeholder={type.baseUnits != null ? String(type.baseUnits) : ""}
+            />
+          </div>
+        ) : null}
+        <div className="text-sm">
+          {type == null ? null : targetH == null ? (
+            <span className="font-medium">الهدف: «باتفاق» — يُدخل يدويًا عند اعتماد العاجل.</span>
+          ) : (
+            <span className="font-bold text-navy">الهدف: {formatWorkingDuration(targetH)}</span>
+          )}
+        </div>
+      </div>
+      {type != null && targetH != null && extraH > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          الأساس {formatWorkingDuration(baseH!)} + ({formatNumber(unitCount! - (type.baseUnits ?? 0))}{" "}
+          {type.unitLabel} فوق الحجم الأساسي × {type.extraUnitH} س) ={" "}
+          {formatWorkingDuration(targetH)}.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function NumberField({
@@ -156,7 +251,6 @@ export function SlaSettingsForm({
                 «ساعات/وحدة» — اترك وحدة الحجم فارغة إن كان النوع لا يُقاس بالوحدات.
               </li>
               <li>«نقاط الجهد» لا تدخل في المدة — تُستخدم لحساب حمل المصمم وسعته.</li>
-              <li>الهدف الناتج يُضرب أخيرًا في معامل أداة التنفيذ المختارة في الطلب (البطاقة التالية).</li>
             </ul>
           </div>
         </CardHeader>
@@ -307,6 +401,7 @@ export function SlaSettingsForm({
               {deleteState.error}
             </p>
           ) : null}
+          <SlaCalculator types={types} />
         </CardContent>
       </Card>
 

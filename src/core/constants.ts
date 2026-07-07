@@ -109,6 +109,35 @@ export const ROLE_META: Record<Role, { label: string }> = {
   executive: { label: "المدير" },
 };
 
+/**
+ * تسميات أزرار الانتقال (CTA) حسب الحالة الهدف — تُستخدم في أزرار تفاصيل
+ * الطلب وشريط «الخطوة التالية» بدل عرض اسم الحالة المجرد (SPEC §12/04).
+ */
+export const TRANSITION_ACTION_META: Record<Status, { label: string }> = {
+  new: { label: "إعادة إلى جديد" },
+  needs_info: { label: "طلب استكمال بيانات" },
+  ready: { label: "اعتماد — جاهز للتنفيذ" },
+  in_progress: { label: "بدء التنفيذ" },
+  internal_review: { label: "إرسال للمراجعة الداخلية" },
+  awaiting_feedback: { label: "إرسال للجهة لإبداء الملاحظات" },
+  delivered: { label: "تسليم الطلب" },
+  closed: { label: "اعتماد الإغلاق" },
+  cancelled: { label: "إلغاء الطلب" },
+};
+
+/** تسميات سياقية تتقدم على TRANSITION_ACTION_META لأزواج (من ← إلى) محددة */
+export const TRANSITION_ACTION_OVERRIDES: Partial<Record<`${Status}>${Status}`, string>> = {
+  "needs_info>ready": "أُكملت البيانات — إعادة للاستوديو",
+  "awaiting_feedback>delivered": "اعتماد التسليم",
+  "awaiting_feedback>in_progress": "إعادة للتنفيذ بملاحظات",
+  "delivered>in_progress": "إعادة للتنفيذ بملاحظات",
+  "internal_review>in_progress": "إعادة للتنفيذ للتعديل",
+};
+
+export function transitionActionLabel(from: Status, to: Status): string {
+  return TRANSITION_ACTION_OVERRIDES[`${from}>${to}`] ?? TRANSITION_ACTION_META[to].label;
+}
+
 export const EVENT_TYPE_META: Record<EventType, { label: string }> = {
   status_change: { label: "تغيير حالة" },
   comment: { label: "إضافة تعليق" },

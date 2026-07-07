@@ -137,7 +137,7 @@ export const settingsSchema = z.object({
   message: "نهاية الدوام يجب أن تلي بدايته.",
 });
 
-/** هوية النظام (صفحة الإعدادات): الاسم والوصف وقائمتا القنوات والمقاسات */
+/** هوية النظام (صفحة الإعدادات): الاسم والوصف والقوائم المرجعية للنموذج والملفات */
 export const brandingSchema = z.object({
   orgName: z.string().trim().min(2, "أدخل اسم الاستوديو.").max(100, "الاسم يتجاوز 100 حرف."),
   orgSubtitle: z.string().trim().max(150, "الوصف يتجاوز 150 حرفًا."),
@@ -147,7 +147,31 @@ export const brandingSchema = z.object({
   sizeOptions: z
     .array(z.string().trim().min(1, "المقاس فارغ.").max(60, "المقاس يتجاوز 60 حرفًا."))
     .min(1, "أضف مقاسًا واحدًا على الأقل."),
+  /** امتدادات الملفات المسموح رفعها — بلا نقطة، أحرف لاتينية/أرقام فقط */
+  allowedFileTypes: z
+    .array(
+      z
+        .string()
+        .transform((v) => v.trim().toLowerCase().replace(/^\.+/, ""))
+        .pipe(
+          z
+            .string()
+            .regex(/^[a-z0-9]{1,10}$/, "امتداد غير صالح — أحرف وأرقام فقط، مثل png أو pdf."),
+        ),
+    )
+    .min(1, "أضف نوع ملف واحدًا على الأقل."),
 });
+
+/** تسليم المصمم: ملفات مرفوعة و/أو روابط خارجية — رابط واحد لكل سطر */
+export const deliverableLinksSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .url("أحد الروابط غير صالح — يجب أن يبدأ بـ https://")
+      .max(500, "الرابط يتجاوز 500 حرف."),
+  )
+  .max(20, "عدد الروابط يتجاوز 20.");
 
 /** جهة (قائمة مرجعية) — بلا id = إنشاء جديد، والتعطيل بدل الحذف */
 export const departmentItemSchema = z.object({

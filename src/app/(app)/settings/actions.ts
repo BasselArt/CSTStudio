@@ -94,6 +94,9 @@ export async function saveBrandingSettings(
     orgSubtitle: formData.get("orgSubtitle") ?? "",
     channels: formData.getAll("channels").filter((c) => typeof c === "string" && c),
     sizeOptions: formData.getAll("sizeOptions").filter((s) => typeof s === "string" && s),
+    allowedFileTypes: formData
+      .getAll("allowedFileTypes")
+      .filter((t) => typeof t === "string" && t),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };

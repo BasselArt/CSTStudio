@@ -34,6 +34,12 @@ export async function GET(
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
+  // تسليمات الروابط ليست ملفات مخزنة — يُعاد التوجيه للرابط الخارجي
+  if (!attachment.path) {
+    if (attachment.url) return NextResponse.redirect(attachment.url);
+    return NextResponse.json({ error: "file missing" }, { status: 404 });
+  }
+
   let file: Buffer;
   try {
     file = readAttachmentFile(attachment.path);
@@ -43,7 +49,7 @@ export async function GET(
 
   return new NextResponse(new Uint8Array(file), {
     headers: {
-      "Content-Type": attachment.mime,
+      "Content-Type": attachment.mime ?? "application/octet-stream",
       "Content-Length": String(file.length),
       // RFC 5987 لأسماء الملفات العربية
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`,

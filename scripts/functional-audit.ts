@@ -608,17 +608,19 @@ async function main() {
   /* ===== G. الملفات وCSV والفلاتر ===== */
   describe("G. الملفات وCSV والفلاتر");
 
+  const allowedExts = ["jpg", "jpeg", "png", "pdf", "mp4", "zip"];
+
   await check("saveUpload يرفض الامتداد الممنوع والحجم الصفري والمتجاوز", async () => {
-    await expectThrows(() => saveUpload(new File([new Uint8Array(10)], "virus.exe")), "FileValidationError");
-    await expectThrows(() => saveUpload(new File([], "empty.png")), "FileValidationError");
+    await expectThrows(() => saveUpload(new File([new Uint8Array(10)], "virus.exe"), allowedExts), "FileValidationError");
+    await expectThrows(() => saveUpload(new File([], "empty.png"), allowedExts), "FileValidationError");
     const big = new File([new Uint8Array(51 * 1024 * 1024)], "big.zip");
-    await expectThrows(() => saveUpload(big), "FileValidationError");
+    await expectThrows(() => saveUpload(big, allowedExts), "FileValidationError");
   });
 
   await check("saveUpload يقبل png ويعيد بيانات سليمة", async () => {
-    const meta = await saveUpload(new File([new Uint8Array([137, 80, 78, 71])], "شعار.png"));
+    const meta = await saveUpload(new File([new Uint8Array([137, 80, 78, 71])], "شعار.png"), allowedExts);
     expect(meta.mime === "image/png" && meta.size === 4 && meta.filename === "شعار.png", "بيانات الملف خاطئة");
-    const buf = readAttachmentFile(meta.path);
+    const buf = readAttachmentFile(meta.path!);
     expect(buf.length === 4, "القراءة خاطئة");
   });
 

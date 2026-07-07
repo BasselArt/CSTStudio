@@ -62,6 +62,7 @@ export default async function NewRequestPage({
         cfg={toCalendarCfg(settingsRow)}
         channels={settingsRow.channels}
         sizeOptions={settingsRow.sizeOptions}
+        allowedExtensions={settingsRow.allowedFileTypes}
         defaultDepartmentId={actor.departmentId}
         requesterName={actor.name}
         action={submitNewRequest}

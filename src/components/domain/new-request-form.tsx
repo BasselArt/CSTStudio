@@ -13,6 +13,7 @@ import {
   Info,
   LayoutTemplate,
   Mail,
+  Minus,
   PencilLine,
   Plus,
   Send,
@@ -134,6 +135,7 @@ export function NewRequestForm({
   cfg,
   channels,
   sizeOptions,
+  allowedExtensions,
   defaultDepartmentId,
   defaultTypeId,
   related,
@@ -147,6 +149,8 @@ export function NewRequestForm({
   channels: string[];
   /** المقاسات المتاحة — من settings.sizeOptions (تُدار في صفحة الإعدادات) */
   sizeOptions: string[];
+  /** امتدادات الملفات المسموح رفعها — من settings.allowedFileTypes */
+  allowedExtensions: string[];
   defaultDepartmentId: number | null;
   defaultTypeId?: number | null;
   /** طلب أصلي يرتبط به هذا الطلب كـ«طلب تعديل» (SPEC §6) */
@@ -215,19 +219,31 @@ export function NewRequestForm({
 
   const selectedType = types.find((t) => t.id === typeId) ?? null;
 
-  /* الملخص الحي عبر دوال core (SPEC §12/03) — يراعي حجم الطلب */
+  /** اختيار النوع يهيّئ حقل الحجم تلقائيًا بالحجم الأساسي للنوع */
+  function selectType(t: TypeOption) {
+    setTypeId(t.id);
+    setUnitCount(t.unitLabel ? String(t.baseUnits ?? 1) : "");
+  }
+
+  function stepUnitCount(delta: number) {
+    const current = Number(unitCount) || selectedType?.baseUnits || 1;
+    setUnitCount(String(Math.min(1000, Math.max(1, current + delta))));
+  }
+
+  /* الملخص الحي عبر دوال core (SPEC §12/03) — يراعي حجم الطلب ويفصّل أثره */
   const summary = useMemo(() => {
     if (!selectedType) return null;
     // «عاجل» قبل الاعتماد يُحسب على مدة «عالي» (SPEC §9)
-    const targetH = slaTargetHours(selectedType, priority, false, {
-      unitCount: unitCount ? Number(unitCount) : null,
-    });
-    if (targetH == null) return { targetH: null, expected: null, dueWarning: false };
+    const sizing = { unitCount: unitCount ? Number(unitCount) : null };
+    const targetH = slaTargetHours(selectedType, priority, false, sizing);
+    if (targetH == null)
+      return { targetH: null, baseH: null, extraH: 0, expected: null, dueWarning: false };
+    const baseH = slaTargetHours(selectedType, priority, false) ?? targetH;
     const expected = addWorkingHours(new Date(), targetH, cfg);
     const dueWarning = publishDueDate
       ? new Date(`${publishDueDate}T23:59:59+03:00`).getTime() < expected.getTime()
       : false;
-    return { targetH, expected, dueWarning };
+    return { targetH, baseH, extraH: targetH - baseH, expected, dueWarning };
   }, [selectedType, priority, unitCount, publishDueDate, cfg]);
 
   return (
@@ -320,7 +336,7 @@ export function NewRequestForm({
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => setTypeId(t.id)}
+                    onClick={() => selectType(t)}
                     className={cn(
                       "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
                       "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
@@ -451,22 +467,48 @@ export function NewRequestForm({
             </div>
             {selectedType?.unitLabel ? (
               <div className="space-y-2">
-                <Label htmlFor="unitCount">حجم الطلب (عدد {selectedType.unitLabel})</Label>
-                <Input
-                  id="unitCount"
-                  name="unitCount"
-                  type="number"
-                  min={1}
-                  max={1000}
-                  dir="ltr"
-                  value={unitCount}
-                  onChange={(e) => setUnitCount(e.target.value)}
-                  placeholder={selectedType.baseUnits ? String(selectedType.baseUnits) : ""}
-                />
+                <Label htmlFor="unitCount">
+                  حجم الطلب — عدد {selectedType.unitLabel}{" "}
+                  <span className="text-danger">*</span>
+                </Label>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="إنقاص العدد"
+                    onClick={() => stepUnitCount(-1)}
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <Input
+                    id="unitCount"
+                    name="unitCount"
+                    type="number"
+                    min={1}
+                    max={1000}
+                    dir="ltr"
+                    className="w-24 text-center"
+                    value={unitCount}
+                    onChange={(e) => setUnitCount(e.target.value)}
+                    aria-invalid={!!errors.unitCount}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="زيادة العدد"
+                    onClick={() => stepUnitCount(1)}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
                 {selectedType.baseUnits != null && selectedType.extraUnitH != null ? (
-                  <p className="text-[10px] text-muted-foreground">
-                    الهدف الأساسي يغطي حتى {selectedType.baseUnits} {selectedType.unitLabel} —
-                    وكل وحدة إضافية تمدد المدة تلقائيًا.
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    مدة النوع الأساسية تغطي حتى {selectedType.baseUnits}{" "}
+                    {selectedType.unitLabel}، وكل {selectedType.unitLabel} إضافية تضيف{" "}
+                    {selectedType.extraUnitH} ساعة عمل — تظهر المدة النهائية في الملخص
+                    الجانبي فورًا.
                   </p>
                 ) : null}
                 <FieldError message={errors.unitCount} />
@@ -619,7 +661,8 @@ export function NewRequestForm({
                 <UploadCloud className="size-8 text-info" />
                 <span className="text-sm">اسحب الملفات هنا أو اضغط للاختيار</span>
                 <span className="text-xs text-muted-foreground">
-                  الأنواع المسموحة: JPG, PNG, PDF, MP4, ZIP — الحد الأقصى لحجم الملف: 50MB
+                  الأنواع المسموحة: {allowedExtensions.map((e) => e.toUpperCase()).join("، ")} —
+                  الحد الأقصى لحجم الملف: 50MB
                 </span>
               </label>
               <input
@@ -627,7 +670,7 @@ export function NewRequestForm({
                 name="files"
                 type="file"
                 multiple
-                accept=".jpg,.jpeg,.png,.pdf,.mp4,.zip"
+                accept={allowedExtensions.map((e) => `.${e}`).join(",")}
                 className="sr-only"
                 onChange={(e) =>
                   setFileNames([...(e.target.files ?? [])].map((f) => f.name))
@@ -717,6 +760,14 @@ export function NewRequestForm({
               <span className="text-muted-foreground">الأولوية</span>
               <span className="font-medium">{PRIORITY_META[priority].label}</span>
             </div>
+            {selectedType?.unitLabel && unitCount ? (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">حجم الطلب</span>
+                <span className="font-medium">
+                  {unitCount} {selectedType.unitLabel}
+                </span>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">مدة التنفيذ المتوقعة</span>
               <span className="font-medium">
@@ -727,6 +778,13 @@ export function NewRequestForm({
                   : "—"}
               </span>
             </div>
+            {summary && summary.targetH != null && summary.extraH > 0 ? (
+              <p className="rounded-lg bg-muted/60 p-2 text-xs text-muted-foreground">
+                المدة الأساسية {formatWorkingDuration(summary.baseH!)} + إضافة{" "}
+                {formatWorkingDuration(summary.extraH)} لأن حجم الطلب يتجاوز الحجم الأساسي
+                للنوع ({selectedType?.baseUnits} {selectedType?.unitLabel}).
+              </p>
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">تاريخ التسليم المتوقع</span>
               <span className="font-medium">
