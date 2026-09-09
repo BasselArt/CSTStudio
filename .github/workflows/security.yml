@@ -1,0 +1,44 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Re-run daily — catches CVEs published against existing pins.
+    - cron: "17 6 * * *"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the runtime image (node:20-alpine in Dockerfile).
+          node-version: 20
+          cache: pnpm
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      # Gates on High+. The transitive floors are pinned in the
+      # `pnpm.overrides` block of package.json, each range major-bounded.
+      # Nothing is exempted via `pnpm.auditConfig.ignoreGhsas` — any new
+      # High or Critical advisory fails the build.
+      - name: pnpm audit — fail on high+
+        run: pnpm audit --prod --audit-level=high
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

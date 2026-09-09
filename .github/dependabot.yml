@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Riyadh
+    open-pull-requests-limit: 5
+    labels: [dependencies, security]
+    # Minor and patch bumps arrive as two grouped PRs (prod / dev) instead of
+    # one per package. Majors stay ungrouped so each is reviewed on its own —
+    # next and next-auth in particular ship breaking changes on majors, and
+    # next-auth is still a pinned 5.0.0-beta.
+    groups:
+      production-minor-patch:
+        dependency-type: production
+        update-types: [minor, patch]
+      development-minor-patch:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Riyadh
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        update-types: [minor, patch]
